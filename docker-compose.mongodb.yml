@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: crafted_well_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: crafted_well_mongo
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
