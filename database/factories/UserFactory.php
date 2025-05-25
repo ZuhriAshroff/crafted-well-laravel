@@ -27,15 +27,17 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            // Legacy database fields
+            'first_name' => fake()->firstName(),
+            'last_name' => fake()->lastName(),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-            'remember_token' => Str::random(10),
-            'profile_photo_path' => null,
-            'current_team_id' => null,
+            'phone_number' => fake()->phoneNumber(),
+            'password_hash' => static::$password ??= Hash::make('password'),
+            'registration_date' => now(),
+            'last_login' => null,
+            'account_status' => 1, // Active by default
+            'role' => 'user',
+            
         ];
     }
 
@@ -46,6 +48,48 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Create an admin user.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'admin',
+            'first_name' => 'Admin',
+            'last_name' => 'User',
+        ]);
+    }
+
+    /**
+     * Create an inactive user.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => 0,
+        ]);
+    }
+
+    /**
+     * Create a user with recent login.
+     */
+    public function recentLogin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'last_login' => now()->subHours(rand(1, 24)),
+        ]);
+    }
+
+    /**
+     * Create a user with specific role.
+     */
+    public function role(string $role): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => $role,
         ]);
     }
 
@@ -61,12 +105,55 @@ class UserFactory extends Factory
         return $this->has(
             Team::factory()
                 ->state(fn (array $attributes, User $user) => [
-                    'name' => $user->name.'\'s Team',
-                    'user_id' => $user->id,
+                    'name' => $user->first_name . ' ' . $user->last_name . '\'s Team',
+                    'user_id' => $user->user_id, // Use correct primary key
                     'personal_team' => true,
                 ])
                 ->when(is_callable($callback), $callback),
             'ownedTeams'
         );
+    }
+
+    /**
+     * Create a user with a complete profile for testing.
+     */
+    public function withProfile(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            // Create a user profile if UserProfile model exists
+            if (class_exists(\App\Models\UserProfile::class)) {
+                \App\Models\UserProfile::factory()->create([
+                    'user_id' => $user->user_id,
+                ]);
+            }
+        });
+    }
+
+    /**
+     * Create a user with orders for testing.
+     */
+    public function withOrders(int $count = 3): static
+    {
+        return $this->afterCreating(function (User $user) use ($count) {
+            if (class_exists(\App\Models\Order::class)) {
+                \App\Models\Order::factory()
+                    ->count($count)
+                    ->create(['user_id' => $user->user_id]);
+            }
+        });
+    }
+
+    /**
+     * Create a user with custom products for testing.
+     */
+    public function withCustomProducts(int $count = 2): static
+    {
+        return $this->afterCreating(function (User $user) use ($count) {
+            if (class_exists(\App\Models\CustomProduct::class)) {
+                \App\Models\CustomProduct::factory()
+                    ->count($count)
+                    ->create(['user_id' => $user->user_id]);
+            }
+        });
     }
 }

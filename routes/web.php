@@ -24,9 +24,16 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     })->name('dashboard');
 
     // Profile routes
-    Route::get('/profile', [UserProfileController::class, 'show'])->name('profile.show');
-    Route::put('/profile', [UserProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [UserProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::middleware(['auth:sanctum', 'verified', 'active.user'])->group(function () {
+        Route::get('/profile', [UserProfileController::class, 'index'])->name('profile.index');
+        Route::get('/profile/create', [UserProfileController::class, 'create'])->name('profile.create');
+        Route::post('/profile', [UserProfileController::class, 'store'])->name('profile.store');
+        Route::get('/profile/{profileId}/edit', [UserProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile/{profileId}', [UserProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile/{profileId}', [UserProfileController::class, 'destroy'])->name('profile.destroy');
+        Route::get('/profile/recommendations', [UserProfileController::class, 'recommendations'])->name('profile.recommendations');
+        Route::get('/profile/analytics', [UserProfileController::class, 'analytics'])->name('profile.analytics');
+    });
 
     Route::resource('custom-products', CustomProductController::class);
     Route::resource('orders', OrderController::class);

@@ -2,98 +2,173 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\UserProfile;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class UserProfileController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display user profile dashboard
      */
-    public function index()
+    public function index(): View
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the user's profile.
-     */
-    public function show()
-    {
-        return view('profile.show', [
-            'user' => Auth::user()
+        $user = auth()->user();
+        $profile = UserProfile::getLatestForUser($user->user_id);
+        
+        return view('profile.skin-profile', [
+            'profile' => $profile,
+            'completion' => $profile ? $profile->getCompletionPercentage() : 0,
+            'skinTypes' => UserProfile::getSkinTypeOptions(),
+            'skinConcerns' => UserProfile::getSkinConcernsOptions(),
+            'environmentalFactors' => UserProfile::getEnvironmentalFactorsOptions(),
         ]);
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Display profile creation wizard
      */
-    public function edit(string $id)
+    public function create(): View
     {
-        //
+        return view('profile.create-wizard', [
+            'skinTypes' => UserProfile::getSkinTypeOptions(),
+            'skinConcerns' => UserProfile::getSkinConcernsOptions(),
+            'environmentalFactors' => UserProfile::getEnvironmentalFactorsOptions(),
+        ]);
     }
 
     /**
-     * Update the user's profile information.
+     * Store a new profile (from web form)
      */
-    public function update(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        $user = Auth::user();
-
-        $validated = $request->validate([
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('User')->ignore($user->user_id, 'user_id')],
-            'phone_number' => ['nullable', 'string', 'max:20'],
-        ]);
-
-        $user->update($validated);
-
-        return back()->with('status', 'profile-updated');
+        $request->validate(UserProfile::validationRules());
+        
+        try {
+            $user = auth()->user();
+            $data = $request->validated();
+            
+            $profile = UserProfile::createOrUpdateForUser($user->user_id, $data);
+            
+            return redirect()->route('profile.index')
+                ->with('success', 'Profile created successfully!');
+                
+        } catch (\Exception $e) {
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to create profile. Please try again.');
+        }
     }
 
     /**
-     * Delete the user's account.
+     * Display profile edit form
      */
-    public function destroy(Request $request)
+    public function edit($profileId = null): View|RedirectResponse
     {
-        $request->validate([
-            'password' => ['required', 'string'],
-        ]);
-
-        $user = Auth::user();
-
-        if (!Hash::check($request->password, $user->password_hash)) {
-            return back()->withErrors([
-                'password' => ['The provided password does not match our records.'],
-            ]);
+        $user = auth()->user();
+        
+        if ($profileId) {
+            $profile = UserProfile::forUser($user->user_id)->findOrFail($profileId);
+        } else {
+            $profile = UserProfile::getLatestForUser($user->user_id);
         }
 
-        $user->delete();
+        if (!$profile) {
+            return redirect()->route('profile.create')
+                ->with('info', 'Please create a profile first.');
+        }
 
-        Auth::logout();
+        return view('profile.edit', [
+            'profile' => $profile,
+            'skinTypes' => UserProfile::getSkinTypeOptions(),
+            'skinConcerns' => UserProfile::getSkinConcernsOptions(),
+            'environmentalFactors' => UserProfile::getEnvironmentalFactorsOptions(),
+        ]);
+    }
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+    /**
+     * Update a profile (from web form)
+     */
+    public function update(Request $request, $profileId): RedirectResponse
+    {
+        $request->validate(UserProfile::validationRules(true));
+        
+        try {
+            $user = auth()->user();
+            $profile = UserProfile::forUser($user->user_id)->findOrFail($profileId);
+            
+            $profile->update($request->validated());
+            
+            return redirect()->route('profile.index')
+                ->with('success', 'Profile updated successfully!');
+                
+        } catch (\Exception $e) {
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to update profile. Please try again.');
+        }
+    }
 
-        return redirect('/');
+    /**
+     * Delete a profile
+     */
+    public function destroy($profileId): RedirectResponse
+    {
+        try {
+            $user = auth()->user();
+            $profile = UserProfile::forUser($user->user_id)->findOrFail($profileId);
+            
+            $profile->delete();
+            
+            return redirect()->route('profile.index')
+                ->with('success', 'Profile deleted successfully!');
+                
+        } catch (\Exception $e) {
+            return back()
+                ->with('error', 'Failed to delete profile. Please try again.');
+        }
+    }
+
+    /**
+     * Display product recommendations based on profile
+     */
+    public function recommendations(): View|RedirectResponse
+    {
+        $user = auth()->user();
+        $profile = UserProfile::getLatestForUser($user->user_id);
+        
+        if (!$profile) {
+            return redirect()->route('profile.create')
+                ->with('info', 'Please create a profile first to get recommendations.');
+        }
+
+        $recommendations = $profile->getRecommendedProducts();
+        
+        return view('profile.recommendations', [
+            'profile' => $profile,
+            'recommendations' => $recommendations,
+        ]);
+    }
+
+    /**
+     * Display profile analytics
+     */
+    public function analytics(): View
+    {
+        $user = auth()->user();
+        $profiles = UserProfile::forUser($user->user_id)->get();
+        
+        $analytics = [
+            'total_profiles' => $profiles->count(),
+            'completion_average' => $profiles->avg(fn($p) => $p->getCompletionPercentage()),
+            'skin_types' => $profiles->groupBy('skin_type')->map->count(),
+            'concerns' => $profiles->pluck('primary_skin_concerns')->groupBy(fn($item) => $item)->map->count(),
+        ];
+        
+        return view('profile.analytics', [
+            'profiles' => $profiles,
+            'analytics' => $analytics,
+        ]);
     }
 }
