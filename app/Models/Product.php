@@ -13,7 +13,7 @@ class Product extends Model
     /**
      * The table associated with the model.
      */
-    protected $table = 'Product';
+    protected $table = 'products';
 
     /**
      * The primary key for the model.
@@ -117,7 +117,7 @@ class Product extends Model
             'base_formulation_id' => [
                 $isUpdate ? 'sometimes' : 'required',
                 'integer',
-                'exists:BaseFormulation,base_formulation_id'
+                'exists:base_formulations,base_formulation_id'
             ],
         ];
 

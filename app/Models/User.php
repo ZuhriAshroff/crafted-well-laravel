@@ -17,17 +17,19 @@ class User extends Authenticatable
     /**
      * The table associated with the model.
      */
-    protected $table = 'User';
+    protected $table = 'users';
 
     /**
      * The primary key for the model.
+     * Changed from 'user_id' to 'id' to match database schema
      */
-    protected $primaryKey = 'user_id';
+    protected $primaryKey = 'id';
 
     /**
      * Indicates if the model should be timestamped.
+     * Changed to true since your table has created_at/updated_at
      */
-    public $timestamps = false;
+    public $timestamps = true;
 
     /**
      * The attributes that are mass assignable.
@@ -38,16 +40,23 @@ class User extends Authenticatable
         'email',
         'phone_number',
         'password_hash',
+        'password', // Add this since your DB has this field
         'role',
         'account_status',
+        'registration_date',
+        'last_login',
+        'email_verified_at',
     ];
 
     /**
      * The attributes that should be hidden for serialization.
      */
     protected $hidden = [
+        'password',
         'password_hash',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /**
@@ -57,6 +66,9 @@ class User extends Authenticatable
         'registration_date' => 'datetime',
         'last_login' => 'datetime',
         'account_status' => 'boolean',
+        'email_verified_at' => 'datetime',
+        'two_factor_confirmed_at' => 'datetime',
+        'is_active' => 'boolean',
     ];
 
     /**
@@ -86,7 +98,10 @@ class User extends Authenticatable
     {
         return Attribute::make(
             get: fn ($value) => $this->password_hash,
-            set: fn ($value) => ['password_hash' => bcrypt($value)],
+            set: fn ($value) => [
+                'password_hash' => bcrypt($value),
+                'password' => bcrypt($value), // Set both fields
+            ],
         );
     }
 
@@ -109,25 +124,26 @@ class User extends Authenticatable
 
     /**
      * Relationships
+     * Updated to use 'id' instead of 'user_id'
      */
     public function profile()
     {
-        return $this->hasOne(UserProfile::class, 'user_id', 'user_id');
+        return $this->hasOne(UserProfile::class, 'user_id', 'id');
     }
 
     public function orders()
     {
-        return $this->hasMany(Order::class, 'user_id', 'user_id');
+        return $this->hasMany(Order::class, 'user_id', 'id');
     }
 
     public function customProducts()
     {
-        return $this->hasMany(CustomProduct::class, 'user_id', 'user_id');
+        return $this->hasMany(CustomProduct::class, 'user_id', 'id');
     }
 
     public function shippingAddresses()
     {
-        return $this->hasMany(ShippingAddress::class, 'user_id', 'user_id');
+        return $this->hasMany(ShippingAddress::class, 'user_id', 'id');
     }
 
     /**
@@ -177,7 +193,7 @@ class User extends Authenticatable
 
     public function getAuthIdentifierName()
     {
-        return 'user_id';
+        return 'id'; // Changed from 'user_id'
     }
 
     public function getJWTIdentifier()
@@ -223,7 +239,7 @@ class User extends Authenticatable
     public static function getRecentUsers($limit = 5)
     {
         return static::select([
-                'user_id',
+                'id', // Changed from 'user_id'
                 'first_name', 
                 'last_name',
                 'email',
@@ -242,7 +258,7 @@ class User extends Authenticatable
     public static function findByEmail(string $email)
     {
         return static::select([
-                'user_id',
+                'id', // Changed from 'user_id'
                 'first_name',
                 'last_name', 
                 'email',

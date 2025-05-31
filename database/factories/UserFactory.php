@@ -26,18 +26,20 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $hashedPassword = static::$password ??= Hash::make('password');
+        
         return [
-            // Legacy database fields
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'email' => fake()->unique()->safeEmail(),
             'phone_number' => fake()->phoneNumber(),
-            'password_hash' => static::$password ??= Hash::make('password'),
+            'password_hash' => $hashedPassword,
+            'password' => $hashedPassword, // Add this for the password field
             'registration_date' => now(),
             'last_login' => null,
-            'account_status' => 1, // Active by default
+            'account_status' => 1,
             'role' => 'user',
-            
+            'email_verified_at' => now(),
         ];
     }
 
@@ -106,7 +108,7 @@ class UserFactory extends Factory
             Team::factory()
                 ->state(fn (array $attributes, User $user) => [
                     'name' => $user->first_name . ' ' . $user->last_name . '\'s Team',
-                    'user_id' => $user->user_id, // Use correct primary key
+                    'user_id' => $user->id, // This will now work with 'id' primary key
                     'personal_team' => true,
                 ])
                 ->when(is_callable($callback), $callback),
@@ -123,7 +125,7 @@ class UserFactory extends Factory
             // Create a user profile if UserProfile model exists
             if (class_exists(\App\Models\UserProfile::class)) {
                 \App\Models\UserProfile::factory()->create([
-                    'user_id' => $user->user_id,
+                    'user_id' => $user->id, // This will now work with 'id' primary key
                 ]);
             }
         });
@@ -138,7 +140,7 @@ class UserFactory extends Factory
             if (class_exists(\App\Models\Order::class)) {
                 \App\Models\Order::factory()
                     ->count($count)
-                    ->create(['user_id' => $user->user_id]);
+                    ->create(['user_id' => $user->id]); // This will now work with 'id' primary key
             }
         });
     }
@@ -152,7 +154,7 @@ class UserFactory extends Factory
             if (class_exists(\App\Models\CustomProduct::class)) {
                 \App\Models\CustomProduct::factory()
                     ->count($count)
-                    ->create(['user_id' => $user->user_id]);
+                    ->create(['user_id' => $user->id]); // This will now work with 'id' primary key
             }
         });
     }

@@ -9,7 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
-class UserProfileAPIController extends Controller
+class UserProfileController extends Controller
 {
     /**
      * Apply middleware for authentication

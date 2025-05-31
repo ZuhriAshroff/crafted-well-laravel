@@ -2,61 +2,125 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\API\ProductAPIController;
-use App\Http\Controllers\API\UserProfileAPIController;
-use App\Http\Controllers\API\CustomProductAPIController;
-use App\Http\Controllers\API\OrderAPIController;
+use App\Http\Controllers\API\ProductController;
+use App\Http\Controllers\API\UserProfileController;
+use App\Http\Controllers\API\OrderController;
+use App\Http\Controllers\API\CustomProductController;
+use App\Http\Controllers\API\BaseFormulationController;
 
-// Public API routes
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+*/
+
+// ========================================
+// PUBLIC API ROUTES (No Authentication)
+// ========================================
+
+// Product public routes
 Route::prefix('products')->group(function () {
-    Route::get('/', [ProductAPIController::class, 'index']);
-    Route::get('/search', [ProductAPIController::class, 'search']);
-    Route::get('/recommendations', [ProductAPIController::class, 'getRecommendations']);
-    Route::get('/{productId}', [ProductAPIController::class, 'show']);
-    Route::get('/{productId}/frequently-bought', [ProductAPIController::class, 'getFrequentlyBoughtTogether']);
-    Route::get('/{productId}/sales-stats', [ProductAPIController::class, 'getSalesStats']);
+    Route::get('/', [ProductController::class, 'index']);                        // GET /api/products
+    Route::get('/search', [ProductController::class, 'search']);                 // GET /api/products/search
+    Route::get('/options', [ProductController::class, 'getOptions']);            // GET /api/products/options
+    Route::get('/{productId}', [ProductController::class, 'show']);              // GET /api/products/{id}
+    Route::get('/{productId}/related', [ProductController::class, 'getFrequentlyBoughtTogether']); // GET /api/products/{id}/related
 });
 
-// Protected API routes
+// ========================================
+// PROTECTED API ROUTES (Authentication Required)
+// ========================================
+
 Route::middleware(['auth:sanctum', 'active.user'])->group(function () {
-    // User routes
+    
+    // Current user route
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
 
-    // Profile routes
+    // ========================================
+    // USER PROFILE API ROUTES
+    // ========================================
     Route::prefix('profiles')->group(function () {
-        Route::get('/', [UserProfileAPIController::class, 'index']);
-        Route::post('/', [UserProfileAPIController::class, 'store']);
-        Route::get('/latest', [UserProfileAPIController::class, 'show']);
-        Route::get('/{profileId}', [UserProfileAPIController::class, 'show']);
-        Route::put('/{profileId}', [UserProfileAPIController::class, 'update']);
-        Route::delete('/{profileId}', [UserProfileAPIController::class, 'destroy']);
-        
-        // Special routes
-        Route::post('/create-or-update', [UserProfileAPIController::class, 'createOrUpdate']);
-        Route::get('/options/all', [UserProfileAPIController::class, 'getOptions']);
-        Route::get('/recommendations', [UserProfileAPIController::class, 'getRecommendations']);
-        
-        // Step-by-step validation routes
-        Route::post('/validate/skin-type', [UserProfileAPIController::class, 'validateSkinType']);
-        Route::post('/validate/skin-concerns', [UserProfileAPIController::class, 'validateSkinConcerns']);
-        Route::post('/validate/environmental-factors', [UserProfileAPIController::class, 'validateEnvironmentalFactors']);
+        Route::get('/', [UserProfileController::class, 'index']);                
+        Route::post('/', [UserProfileController::class, 'store']);               
+        Route::get('/latest', [UserProfileController::class, 'show']);           
+        Route::get('/{profileId}', [UserProfileController::class, 'show']);      
+        Route::put('/{profileId}', [UserProfileController::class, 'update']);    
+        Route::delete('/{profileId}', [UserProfileController::class, 'destroy']); 
     });
 
-    // Custom products routes
-    Route::apiResource('custom-products', CustomProductAPIController::class);
-    
-    // Orders routes
-    Route::apiResource('orders', OrderAPIController::class);
-    
-    // Admin-only routes
-    Route::middleware('admin')->group(function () {
-        Route::prefix('admin')->group(function () {
-            Route::post('/products', [ProductAPIController::class, 'store']);
-            Route::put('/products/{productId}', [ProductAPIController::class, 'update']);
-            Route::delete('/products/{productId}', [ProductAPIController::class, 'destroy']);
-            Route::get('/products/analytics', [ProductAPIController::class, 'getAnalytics']);
+    // ========================================
+    // PRODUCT API ROUTES (Authenticated)
+    // ========================================
+    Route::prefix('products')->group(function () {
+        Route::get('/recommendations', [ProductController::class, 'getRecommendations']); 
+    });
+
+    // ========================================
+    // ORDER API ROUTES
+    // ========================================
+    Route::prefix('orders')->group(function () {
+        Route::get('/', [OrderController::class, 'index']);                      
+        Route::post('/', [OrderController::class, 'store']);                     
+        Route::get('/statistics', [OrderController::class, 'statistics']);       
+        Route::get('/{orderId}', [OrderController::class, 'show']);              
+        Route::put('/{orderId}', [OrderController::class, 'update']);            
+        Route::post('/{orderId}/cancel', [OrderController::class, 'cancel']);    
+    });
+
+    // ========================================
+    // CUSTOM PRODUCTS API ROUTES
+    // ========================================
+    Route::prefix('custom-products')->group(function () {
+        Route::get('/', [CustomProductController::class, 'index']);                           
+        Route::post('/', [CustomProductController::class, 'store']);                          
+        Route::get('/statistics', [CustomProductController::class, 'statistics']);           
+        Route::get('/{customProductId}', [CustomProductController::class, 'show']);          
+        Route::put('/{customProductId}', [CustomProductController::class, 'update']);        
+        Route::delete('/{customProductId}', [CustomProductController::class, 'destroy']);    
+        Route::post('/{customProductId}/reformulate', [CustomProductController::class, 'reformulate']); 
+    });
+
+    // ========================================
+    // BASE FORMULATIONS API ROUTES
+    // ========================================
+    Route::prefix('base-formulations')->group(function () {
+        Route::get('/', [BaseFormulationController::class, 'index']);                                           
+        Route::get('/{baseFormulationId}', [BaseFormulationController::class, 'show']);                        
+        Route::post('/compatible', [BaseFormulationController::class, 'getCompatibleFormulations']);           
+        Route::post('/recommendations', [BaseFormulationController::class, 'getRecommendations']);             
+    });
+
+    // ========================================
+    // ADMIN API ROUTES
+    // ========================================
+    Route::middleware('admin')->prefix('admin')->group(function () {
+        
+        // Product admin routes
+        Route::prefix('products')->group(function () {
+            Route::post('/', [ProductController::class, 'store']);               
+            Route::put('/{productId}', [ProductController::class, 'update']);    
+            Route::delete('/{productId}', [ProductController::class, 'destroy']); 
+        });
+
+        // Order admin routes
+        Route::prefix('orders')->group(function () {
+            Route::get('/', [OrderController::class, 'adminIndex']);             
+            Route::put('/{orderId}', [OrderController::class, 'adminUpdate']);   
+        });
+
+        // Custom products admin routes
+        Route::prefix('custom-products')->group(function () {
+            Route::get('/', [CustomProductController::class, 'adminIndex']);  
+            Route::get('/analytics', [CustomProductController::class, 'analytics']);         
+        });
+
+        // Base formulations admin routes
+        Route::prefix('base-formulations')->group(function () {
+            Route::post('/', [BaseFormulationController::class, 'store']);                                     
+            Route::put('/{baseFormulationId}', [BaseFormulationController::class, 'update']);                 
+            Route::delete('/{baseFormulationId}', [BaseFormulationController::class, 'destroy']);             
         });
     });
 });

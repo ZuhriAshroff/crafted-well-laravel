@@ -13,7 +13,7 @@ class UserProfile extends Model
     /**
      * The table associated with the model.
      */
-    protected $table = 'UserProfile';
+    protected $table = 'user_profiles';
 
     /**
      * The primary key for the model.
@@ -69,12 +69,12 @@ class UserProfile extends Model
         });
     }
 
-    /**
+/**
      * Relationships
      */
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id', 'user_id');
+        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
     public function customProducts()
