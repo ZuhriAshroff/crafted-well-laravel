@@ -9,7 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
-class BaseFormulationAPIController extends Controller
+class BaseFormulationController extends Controller
 {
     /**
      * Apply middleware for authentication

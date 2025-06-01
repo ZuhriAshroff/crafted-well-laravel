@@ -47,11 +47,24 @@
 
                         <x-slot name="content">
                             <x-dropdown-link :href="route('dashboard')">
-                                {{ __('Dashboard') }}
+                                <div class="flex items-center">
+                                    <i class="fas fa-tachometer-alt w-4 h-4 mr-2 text-gray-400"></i>
+                                    {{ __('Dashboard') }}
+                                </div>
+                            </x-dropdown-link>
+
+                            <x-dropdown-link :href="route('custom-products.index')">
+                                <div class="flex items-center">
+                                    <i class="fas fa-flask w-4 h-4 mr-2 text-pink-500"></i>
+                                    {{ __('My Custom Products') }}
+                                </div>
                             </x-dropdown-link>
 
                             <x-dropdown-link :href="route('profile.show')">
-                                {{ __('Profile') }}
+                                <div class="flex items-center">
+                                    <i class="fas fa-user w-4 h-4 mr-2 text-gray-400"></i>
+                                    {{ __('Profile') }}
+                                </div>
                             </x-dropdown-link>
 
                             <div class="border-t border-gray-200"></div>
@@ -59,7 +72,10 @@
                             <form method="POST" action="{{ route('logout') }}" x-data>
                                 @csrf
                                 <x-dropdown-link :href="route('logout')" @click.prevent="$root.submit();">
-                                    {{ __('Log Out') }}
+                                    <div class="flex items-center">
+                                        <i class="fas fa-sign-out-alt w-4 h-4 mr-2 text-gray-400"></i>
+                                        {{ __('Log Out') }}
+                                    </div>
                                 </x-dropdown-link>
                             </form>
                         </x-slot>
@@ -116,17 +132,33 @@
 
                 <div class="mt-3 space-y-1">
                     <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
+                        <div class="flex items-center">
+                            <i class="fas fa-tachometer-alt w-4 h-4 mr-2 text-gray-400"></i>
+                            {{ __('Dashboard') }}
+                        </div>
+                    </x-responsive-nav-link>
+
+                    <x-responsive-nav-link :href="route('custom-products.index')" :active="request()->routeIs('custom-products.*')">
+                        <div class="flex items-center">
+                            <i class="fas fa-flask w-4 h-4 mr-2 text-pink-500"></i>
+                            {{ __('My Custom Products') }}
+                        </div>
                     </x-responsive-nav-link>
 
                     <x-responsive-nav-link :href="route('profile.show')" :active="request()->routeIs('profile.show')">
-                        {{ __('Profile') }}
+                        <div class="flex items-center">
+                            <i class="fas fa-user w-4 h-4 mr-2 text-gray-400"></i>
+                            {{ __('Profile') }}
+                        </div>
                     </x-responsive-nav-link>
 
                     <form method="POST" action="{{ route('logout') }}" x-data>
                         @csrf
                         <x-responsive-nav-link :href="route('logout')" @click.prevent="$root.submit();">
-                            {{ __('Log Out') }}
+                            <div class="flex items-center">
+                                <i class="fas fa-sign-out-alt w-4 h-4 mr-2 text-gray-400"></i>
+                                {{ __('Log Out') }}
+                            </div>
                         </x-responsive-nav-link>
                     </form>
                 </div>
@@ -144,4 +176,4 @@
             </div>
         @endauth
     </div>
-</nav> 
+</nav>

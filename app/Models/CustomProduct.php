@@ -11,6 +11,8 @@ class CustomProduct extends Model
 {
     use HasFactory;
 
+
+
     /**
      * The table associated with the model.
      */
@@ -56,6 +58,8 @@ class CustomProduct extends Model
      * Base pricing and formulation constants
      */
     public const BASE_PRICE = 65.00;
+    public const PREMIUM_PRICE_MULTIPLIER = 25;
+
 
     /**
      * Common allergies with examples and alternatives
@@ -310,6 +314,12 @@ class CustomProduct extends Model
                 'product_description' => $productDescription,
             ]);
 
+            // Multiply the total price by the premium price multiplier
+            $totalPrice = $totalPrice * self::PREMIUM_PRICE_MULTIPLIER;
+            dd($totalPrice);
+            // Update the custom product with the new total price
+            $customProduct->update(['total_price' => $totalPrice]);
+
             return $customProduct;
         });
     }
@@ -529,6 +539,8 @@ class CustomProduct extends Model
             'benefits' => $this->getBenefits(),
             'formulation_date' => $this->formulation_date,
         ];
+        $this->total_price = $this->total_price * self::PREMIUM_PRICE_MULTIPLIER;
+        return $this;   
     }
 
     /**

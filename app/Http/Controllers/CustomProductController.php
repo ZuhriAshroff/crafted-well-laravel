@@ -25,20 +25,19 @@ class CustomProductController extends Controller
     {
         $user = auth()->user();
         
-        $customProducts = CustomProduct::forUser($user->user_id)
+        $customProducts = CustomProduct::forUser($user->id)
             ->with(['baseProduct'])
             ->orderBy('formulation_date', 'desc')
             ->paginate(12);
-
-        return view('custom-products.index', [
+    
+        return view('custom-products.show-all', [
             'customProducts' => $customProducts,
             'userStats' => [
-                'total_products' => CustomProduct::getUserProductsCount($user->user_id),
-                'recent_products' => CustomProduct::getRecentForUser($user->user_id, 3),
+                'total_products' => CustomProduct::getUserProductsCount($user->id),
+                'recent_products' => CustomProduct::getRecentForUser($user->id, 3),
             ]
         ]);
     }
-
     /**
      * Show the form for creating a new custom product
      */

@@ -61,8 +61,8 @@
             <div class="relative">
                 <!-- Main Image -->
                 <div class="bg-white rounded-lg p-8 shadow-md mb-4">
-                    <img src="{{ asset('images/serum-main.jpg') }}" alt="Personalized Serum" class="w-full" id="mainImage"
-                         onerror="this.src='{{ asset('images/placeholder.jpg') }}'">
+                    <img src="{{ asset('images/products/serum-main.avif') }}" alt="Personalized Serum" class="w-full" id="mainImage"
+                         onerror="this.src='{{ asset('images/products/serum-main.png') }}'">
                     <button class="absolute right-12 bottom-12 bg-white rounded-full p-2 shadow-md" onclick="openImageModal()">
                         <i class="fas fa-search-plus text-gray-600"></i>
                     </button>
@@ -71,13 +71,13 @@
                 <div class="grid grid-cols-3 gap-4">
                     <img src="{{ asset('images/serum-1.jpg') }}" alt="Product view 1" 
                          class="w-full rounded-lg shadow-sm cursor-pointer thumbnail border-2 border-pink-500"
-                         onerror="this.src='{{ asset('images/placeholder.jpg') }}'">
+                         onerror="this.src='{{ asset('images/placeholders/placeholder1.png') }}'">
                     <img src="{{ asset('images/serum-2.jpg') }}" alt="Product view 2" 
                          class="w-full rounded-lg shadow-sm cursor-pointer thumbnail"
-                         onerror="this.src='{{ asset('images/placeholder.jpg') }}'">
+                         onerror="this.src='{{ asset('images/placeholders/placeholder2.png') }}'">
                     <img src="{{ asset('images/serum-3.jpg') }}" alt="Product view 3" 
                          class="w-full rounded-lg shadow-sm cursor-pointer thumbnail"
-                         onerror="this.src='{{ asset('images/placeholder.jpg') }}'">
+                         onerror="this.src='{{ asset('images/placeholders/placeholder3.png') }}'">
                 </div>
                 <!-- Navigation Arrows -->
                 <button class="absolute left-0 top-1/2 transform -translate-y-1/2 bg-white rounded-full p-2 shadow-md" onclick="changeImage(-1)">
@@ -92,7 +92,7 @@
             <div>
                 <div class="flex justify-between items-start mb-4">
                     <h1 class="text-3xl font-bold">{{ $productDetails['name'] }}</h1>
-                    <div class="flex space-x-2">
+                    <!-- <div class="flex space-x-2">
                         <a href="{{ route('custom-products.reformulate', $customProduct->custom_product_id) }}" 
                            class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm hover:bg-blue-200 transition-colors">
                             <i class="fas fa-edit mr-1"></i> Reformulate
@@ -101,7 +101,7 @@
                            class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm hover:bg-gray-200 transition-colors">
                             <i class="fas fa-cog mr-1"></i> Edit
                         </a>
-                    </div>
+                    </div> -->
                 </div>
                 
                 <!-- Price -->
