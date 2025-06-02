@@ -160,136 +160,146 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Set up CSRF token for AJAX requests
-            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+       // Replace your admin login JavaScript with this:
+
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            // Initialize authentication utilities
-            const auth = {
-                init() {
-                    // Clear session if explicitly needed
-                    const urlParams = new URLSearchParams(window.location.search);
-                    if (urlParams.get('clear_session')) {
-                        this.clearSession();
-                    }
-
-                    // Check if we were redirected here
-                    if (urlParams.get('session_expired')) {
-                        this.showError('Your session has expired. Please login again.');
-                    }
-                },
-
-                clearSession() {
-                    // Clear any existing tokens
-                    sessionStorage.clear();
-                    
-                    // Clear cookies if any
-                    document.cookie = 'laravel_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                },
-
-                setSession(token, user, remember = false) {
-                    try {
-                        // Store in session storage for SPA-like behavior
-                        sessionStorage.setItem('adminToken', token);
-                        sessionStorage.setItem('adminUser', JSON.stringify(user));
-                        console.log('Session set successfully for user:', user.email);
-                    } catch (error) {
-                        console.error('Error setting session:', error);
-                        throw new Error('Failed to set session');
-                    }
-                },
-
-                showError(message) {
-                    const alertEl = document.getElementById('errorAlert');
-                    const errorMsgEl = document.getElementById('errorMessage');
-                    if (alertEl && errorMsgEl) {
-                        errorMsgEl.textContent = message;
-                        alertEl.classList.remove('hidden');
-                        setTimeout(() => alertEl.classList.add('hidden'), 5000);
-                    }
-                }
-            };
-
-            // UI utilities
-            const ui = {
-                setLoading(button, isLoading) {
-                    button.disabled = isLoading;
-                    button.innerHTML = isLoading ? `
-                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Signing in...
-                ` : `
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                    </svg>
-                    <span>Sign In</span>
-                `;
-                },
-
-                showRedirectingState() {
-                    document.body.innerHTML = `
-                    <div class="min-h-screen flex items-center justify-center bg-slate-100">
-                        <div class="text-center">
-                            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                            <p class="text-slate-600">Redirecting to dashboard...</p>
-                        </div>
-                    </div>
-                `;
-                }
-            };
-
-            // Form handling
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                loginForm.addEventListener('submit', async function (e) {
-                    e.preventDefault();
-                    const submitButton = loginForm.querySelector('button[type="submit"]');
-                    const rememberMe = document.getElementById('remember').checked;
-
-                    ui.setLoading(submitButton, true);
-
-                    try {
-                        const response = await fetch('{{ route("admin.login") }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-CSRF-TOKEN': token
-                            },
-                            body: JSON.stringify({
-                                email: document.getElementById('email').value,
-                                password: document.getElementById('password').value,
-                                remember: rememberMe
-                            })
-                        });
-
-                        const data = await response.json();
-
-                        if (data.status === 'success' && data.data?.token) {
-                            // Store authentication data
-                            auth.setSession(data.data.token, data.data.user, rememberMe);
-
-                            // Show loading state and redirect
-                            ui.showRedirectingState();
-                            setTimeout(() => {
-                                window.location.href = '{{ route("admin.dashboard") }}';
-                            }, 500);
-                        } else {
-                            throw new Error(data.message || 'Invalid credentials');
-                        }
-                    } catch (error) {
-                        console.error('Login error:', error);
-                        auth.showError(error.message || 'Login failed - please try again');
-                        ui.setLoading(submitButton, false);
+            const formData = new FormData(this);
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            
+            // Show loading state
+            submitButton.disabled = true;
+            submitButton.textContent = 'Signing in...';
+            
+            // Clear previous errors
+            clearErrors();
+            
+            try {
+                // Use relative URL instead of absolute HTTP URL
+                const response = await fetch('/admin/login', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': getCSRFToken(),
+                        'Accept': 'application/json'
                     }
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show success message
+                    showSuccess('Login successful! Redirecting...');
+                    
+                    // Redirect to admin dashboard
+                    setTimeout(() => {
+                        window.location.href = result.redirect || '/admin/dashboard';
+                    }, 1000);
+                } else {
+                    // Show error message
+                    showError(result.message || 'Invalid credentials. Please try again.');
+                }
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                
+                if (error.message.includes('Failed to fetch')) {
+                    showError('Network error. Please check your connection and try again.');
+                } else {
+                    showError('Login failed. Please try again.');
+                }
+            } finally {
+                // Reset button state
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
             }
-
-            // Initialize
-            auth.init();
         });
+    }
+});
+
+// Helper function to get CSRF token
+function getCSRFToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (!metaTag) {
+        console.error('CSRF token meta tag not found. Make sure your layout includes the CSRF meta tag.');
+        return '';
+    }
+    return metaTag.content;
+}
+
+// Show error message
+function showError(message) {
+    clearErrors();
+    
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4';
+    errorDiv.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-circle mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    const form = document.getElementById('loginForm');
+    if (form) {
+        form.insertBefore(errorDiv, form.firstChild);
+    }
+}
+
+// Show success message
+function showSuccess(message) {
+    clearErrors();
+    
+    const successDiv = document.createElement('div');
+    successDiv.className = 'success-message bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4';
+    successDiv.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    const form = document.getElementById('loginForm');
+    if (form) {
+        form.insertBefore(successDiv, form.firstChild);
+    }
+}
+
+// Clear existing error/success messages
+function clearErrors() {
+    const existingMessages = document.querySelectorAll('.error-message, .success-message');
+    existingMessages.forEach(message => message.remove());
+}
+
+// Optional: Add some visual feedback for form fields
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('input[type="email"], input[type="password"]');
+    
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.classList.add('ring-2', 'ring-blue-300');
+        });
+        
+        input.addEventListener('blur', function() {
+            this.classList.remove('ring-2', 'ring-blue-300');
+        });
+        
+        // Clear errors when user starts typing
+        input.addEventListener('input', function() {
+            clearErrors();
+        });
+    });
+});
     </script>
 
 </body>

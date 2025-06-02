@@ -193,8 +193,20 @@
 </div>
 @endsection
 
+// Replace the entire @push('scripts') section with this:
+
 @push('scripts')
 <script>
+    // Helper function to get CSRF token safely
+    function getCSRFToken() {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        if (!metaTag) {
+            console.error('CSRF token meta tag not found. Make sure your layout includes: <meta name="csrf-token" content="{{ csrf_token() }}">');
+            return null;
+        }
+        return metaTag.content;
+    }
+
     // Auto-hide flash messages
     document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
@@ -215,6 +227,12 @@
             const action = btn.dataset.action;
             const itemId = btn.dataset.id;
             const input = document.querySelector(`input[data-id="${itemId}"]`);
+            
+            if (!input) {
+                showError('Could not find quantity input');
+                return;
+            }
+            
             let currentValue = parseInt(input.value);
             
             if (action === 'increase' && currentValue < 10) {
@@ -251,14 +269,24 @@
 
     async function updateCartItem(itemId, quantity) {
         try {
+            const csrfToken = getCSRFToken();
+            if (!csrfToken) {
+                showError('Security token not found. Please refresh the page.');
+                return;
+            }
+
             const response = await fetch(`{{ url('/cart/update') }}/${itemId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({ quantity: quantity })
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
             const result = await response.json();
             
@@ -280,21 +308,33 @@
         }
 
         try {
+            const csrfToken = getCSRFToken();
+            if (!csrfToken) {
+                showError('Security token not found. Please refresh the page.');
+                return;
+            }
+
             const response = await fetch(`{{ url('/cart/remove') }}/${itemId}`, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    'X-CSRF-TOKEN': csrfToken
                 }
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
             const result = await response.json();
             
             if (result.success) {
                 // Remove the item from DOM with animation
                 const cartItem = document.querySelector(`[data-id="${itemId}"]`);
-                cartItem.style.transition = 'opacity 0.3s, transform 0.3s';
-                cartItem.style.opacity = '0';
-                cartItem.style.transform = 'translateX(-100%)';
+                if (cartItem) {
+                    cartItem.style.transition = 'opacity 0.3s, transform 0.3s';
+                    cartItem.style.opacity = '0';
+                    cartItem.style.transform = 'translateX(-100%)';
+                }
                 
                 setTimeout(() => {
                     location.reload();
@@ -314,12 +354,22 @@
         }
 
         try {
+            const csrfToken = getCSRFToken();
+            if (!csrfToken) {
+                showError('Security token not found. Please refresh the page.');
+                return;
+            }
+
             const response = await fetch('{{ route("cart.clear") }}', {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    'X-CSRF-TOKEN': csrfToken
                 }
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
             const result = await response.json();
             
@@ -335,6 +385,13 @@
     }
 
     function showError(message) {
+        // Check if document.body exists
+        if (!document.body) {
+            console.error('Error:', message);
+            alert(message); // Fallback if body doesn't exist
+            return;
+        }
+
         const errorDiv = document.createElement('div');
         errorDiv.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50';
         errorDiv.innerHTML = `
@@ -343,8 +400,15 @@
                 <i class="fas fa-times"></i>
             </button>
         `;
+        
         document.body.appendChild(errorDiv);
-        setTimeout(() => errorDiv.remove(), 5000);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (errorDiv && errorDiv.parentNode) {
+                errorDiv.remove();
+            }
+        }, 5000);
     }
 </script>
 @endpush
