@@ -194,9 +194,15 @@ We welcome contributions to Crafted Well! Here's how you can help:
 - Add tests for new features
 - Update documentation as needed
 
+## 👨‍💻 Developer
+
+**Zuhri Ashroff** - Full Stack Developer  
+*Passionate about creating innovative solutions*
+
 ## 📞 Support & Contact
 
 - **🌐 Website:** [https://crafted-well-laravel.up.railway.app](https://crafted-well-laravel.up.railway.app)
+- **👨‍💻 Developer:** Zuhri Ashroff
 - **📧 Email:** support@craftedwell.com
 - **🐛 Issues:** [GitHub Issues](https://github.com/yourusername/crafted-well-laravel/issues)
 
@@ -206,6 +212,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## 🙏 Acknowledgments
 
+- **Zuhri Ashroff** - Lead Developer and Creator of Crafted Well
 - **Laravel Team** - For the amazing framework
 - **Tailwind CSS** - For the utility-first CSS framework
 - **Railway** - For seamless deployment and hosting
@@ -215,7 +222,8 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ---
 
 <p align="center">
-  <strong>Built with ❤️ for beautiful, personalized skincare</strong>
+  <strong>Developed with ❤️ by Zuhri Ashroff</strong><br>
+  <em>Built for beautiful, personalized skincare</em>
 </p>
 
 <p align="center">
