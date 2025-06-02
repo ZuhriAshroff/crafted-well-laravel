@@ -160,7 +160,7 @@
     </div>
 
     <script>
-       // Replace your admin login JavaScript with this:
+// TEMPORARY DEBUG VERSION - Use this to see what's wrong, then switch back to the main version
 
 document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginForm');
@@ -180,46 +180,66 @@ document.addEventListener('DOMContentLoaded', function() {
             // Clear previous errors
             clearErrors();
             
+            // Debug: Log form data
+            console.log('Form data:');
+            for (let [key, value] of formData.entries()) {
+                console.log(key, value);
+            }
+            
+            // Debug: Check CSRF token
+            const csrfToken = getCSRFToken();
+            console.log('CSRF Token:', csrfToken);
+            
             try {
-                // Use relative URL instead of absolute HTTP URL
                 const response = await fetch('/admin/login', {
                     method: 'POST',
                     body: formData,
                     headers: {
-                        'X-CSRF-TOKEN': getCSRFToken(),
+                        'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
                     }
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+                
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+                
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                    console.log('Parsed response:', result);
+                } catch (parseError) {
+                    console.error('Failed to parse JSON:', parseError);
+                    showError('Server returned invalid response. Check console for details.');
+                    return;
                 }
                 
-                const result = await response.json();
-                
-                if (result.success) {
-                    // Show success message
+                if (response.ok && result.success) {
                     showSuccess('Login successful! Redirecting...');
-                    
-                    // Redirect to admin dashboard
                     setTimeout(() => {
                         window.location.href = result.redirect || '/admin/dashboard';
                     }, 1000);
+                } else if (response.status === 422) {
+                    console.log('Validation errors:', result.errors);
+                    if (result.errors) {
+                        const errorMessages = Object.values(result.errors).flat();
+                        showError('Validation errors:<br>' + errorMessages.join('<br>'));
+                    } else {
+                        showError(result.message || 'Validation failed. Please check your input.');
+                    }
+                } else if (response.status === 419) {
+                    showError('CSRF token expired. Please refresh the page and try again.');
+                    setTimeout(() => window.location.reload(), 2000);
                 } else {
-                    // Show error message
-                    showError(result.message || 'Invalid credentials. Please try again.');
+                    showError(result.message || `Error ${response.status}: ${result.error || 'Login failed'}`);
                 }
                 
             } catch (error) {
                 console.error('Login error:', error);
-                
-                if (error.message.includes('Failed to fetch')) {
-                    showError('Network error. Please check your connection and try again.');
-                } else {
-                    showError('Login failed. Please try again.');
-                }
+                showError('Network error: ' + error.message);
             } finally {
-                // Reset button state
                 submitButton.disabled = false;
                 submitButton.textContent = originalText;
             }
@@ -227,79 +247,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Helper function to get CSRF token
 function getCSRFToken() {
     const metaTag = document.querySelector('meta[name="csrf-token"]');
     if (!metaTag) {
-        console.error('CSRF token meta tag not found. Make sure your layout includes the CSRF meta tag.');
+        console.error('CSRF token meta tag not found');
         return '';
     }
     return metaTag.content;
 }
 
-// Show error message
 function showError(message) {
     clearErrors();
-    
     const errorDiv = document.createElement('div');
     errorDiv.className = 'error-message bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4';
-    errorDiv.innerHTML = `
-        <div class="flex items-center">
-            <i class="fas fa-exclamation-circle mr-2"></i>
-            <span>${message}</span>
-        </div>
-    `;
-    
+    errorDiv.innerHTML = `<div class="flex items-start"><i class="fas fa-exclamation-circle mr-2 mt-1"></i><div>${message}</div></div>`;
     const form = document.getElementById('loginForm');
     if (form) {
         form.insertBefore(errorDiv, form.firstChild);
     }
 }
 
-// Show success message
 function showSuccess(message) {
     clearErrors();
-    
     const successDiv = document.createElement('div');
     successDiv.className = 'success-message bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4';
-    successDiv.innerHTML = `
-        <div class="flex items-center">
-            <i class="fas fa-check-circle mr-2"></i>
-            <span>${message}</span>
-        </div>
-    `;
-    
+    successDiv.innerHTML = `<div class="flex items-center"><i class="fas fa-check-circle mr-2"></i><span>${message}</span></div>`;
     const form = document.getElementById('loginForm');
     if (form) {
         form.insertBefore(successDiv, form.firstChild);
     }
 }
 
-// Clear existing error/success messages
 function clearErrors() {
     const existingMessages = document.querySelectorAll('.error-message, .success-message');
     existingMessages.forEach(message => message.remove());
 }
-
-// Optional: Add some visual feedback for form fields
-document.addEventListener('DOMContentLoaded', function() {
-    const inputs = document.querySelectorAll('input[type="email"], input[type="password"]');
-    
-    inputs.forEach(input => {
-        input.addEventListener('focus', function() {
-            this.classList.add('ring-2', 'ring-blue-300');
-        });
-        
-        input.addEventListener('blur', function() {
-            this.classList.remove('ring-2', 'ring-blue-300');
-        });
-        
-        // Clear errors when user starts typing
-        input.addEventListener('input', function() {
-            clearErrors();
-        });
-    });
-});
     </script>
 
 </body>
