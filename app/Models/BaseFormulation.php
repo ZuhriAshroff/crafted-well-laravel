@@ -539,7 +539,7 @@ class BaseFormulation extends Model
      */
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by', 'user_id');
+        return $this->belongsTo(User::class, 'created_by', 'id');
     }
 
     /**

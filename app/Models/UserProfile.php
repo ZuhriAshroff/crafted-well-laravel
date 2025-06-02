@@ -29,7 +29,7 @@ class UserProfile extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'user_id',
+        'id',
         'skin_type',
         'primary_skin_concerns',
         'secondary_skin_concerns',
@@ -74,7 +74,7 @@ class UserProfile extends Model
      */
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id', 'id');
+        return $this->belongsTo(User::class, 'id', 'id');
     }
 
     public function customProducts()
@@ -88,7 +88,7 @@ class UserProfile extends Model
     public static function validationRules($isUpdate = false): array
     {
         $rules = [
-            'user_id' => $isUpdate ? 'sometimes|exists:User,user_id' : 'required|exists:User,user_id',
+            'id' => $isUpdate ? 'sometimes|exists:User,id' : 'required|exists:User,id',
             'skin_type' => [
                 $isUpdate ? 'sometimes' : 'required',
                 Rule::in(self::VALID_SKIN_TYPES)
@@ -120,7 +120,7 @@ class UserProfile extends Model
      */
     public function scopeForUser($query, $userId)
     {
-        return $query->where('user_id', $userId);
+        return $query->where('id', $userId);
     }
 
     public function scopeLatest($query)
@@ -157,7 +157,7 @@ class UserProfile extends Model
     {
         return [
             'profile_id' => $this->profile_id,
-            'user_id' => $this->user_id,
+            'id' => $this->id,
             'skin_type' => $this->skin_type,
             'primary_skin_concerns' => $this->primary_skin_concerns,
             'secondary_skin_concerns' => $this->secondary_skin_concerns,
@@ -183,7 +183,7 @@ class UserProfile extends Model
             return $existingProfile;
         }
 
-        $data['user_id'] = $userId;
+        $data['id'] = $userId;
         return static::create($data);
     }
 

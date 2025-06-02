@@ -11,6 +11,9 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="icon" href="{{ asset('images/Crafted Well Logo (2).png') }}" sizes="32x32" type="image/png">
+<link rel="icon" href="{{ asset('images/Crafted Well Logo (2).png') }}" sizes="64x64" type="image/png">
+<link rel="apple-touch-icon" href="{{ asset('images/Crafted Well Logo (2).png') }}" sizes="180x180">
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])

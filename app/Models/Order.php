@@ -30,7 +30,7 @@ class Order extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'user_id',
+        'id',
         'order_date',
         'total_amount',
         'payment_status',
@@ -84,10 +84,10 @@ class Order extends Model
     public static function validationRules($isUpdate = false): array
     {
         $rules = [
-            'user_id' => [
+            'id' => [
                 $isUpdate ? 'sometimes' : 'required',
                 'integer',
-                'exists:User,user_id'
+                'exists:User,id'
             ],
             'total_amount' => [
                 $isUpdate ? 'sometimes' : 'required',
@@ -195,7 +195,7 @@ class Order extends Model
      */
     public function scopeForUser($query, $userId)
     {
-        return $query->where('user_id', $userId);
+        return $query->where('id', $userId);
     }
 
     /**
@@ -233,14 +233,14 @@ class Order extends Model
     public function getFullDetails(): array
     {
         $this->load([
-            'user:user_id,first_name,last_name,email',
+            'user:id,first_name,last_name,email',
             'orderItems.product:product_id,product_name,base_category',
             'orderItems.customProduct:custom_product_id,product_name'
         ]);
 
         return [
             'order_id' => $this->order_id,
-            'user_id' => $this->user_id,
+            'id' => $this->id,
             'user_email' => $this->user->email ?? null,
             'user_name' => $this->user ? $this->user->name : null,
             'order_date' => $this->order_date,
@@ -328,7 +328,7 @@ class Order extends Model
 
     public static function getRecentOrders($limit = 5)
     {
-        return static::with(['user:user_id,first_name,last_name,email'])
+        return static::with(['user:id,first_name,last_name,email'])
             ->recent($limit)
             ->get()
             ->map(function ($order) {
@@ -397,7 +397,7 @@ class Order extends Model
      */
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id', 'user_id');
+        return $this->belongsTo(User::class, 'id', 'id');
     }
 
     /**

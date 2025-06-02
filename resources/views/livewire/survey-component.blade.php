@@ -110,7 +110,7 @@
                                        ($key === 'tropical' ? 'Humid, warm climate' : 'Moderate, changing seasons') }}
                                 </p>
                             </div>
-                            <img src="{{ asset('images/environments/' . $key . '.png') }}" 
+                            <img src="{{ asset('images/' . $key . '.png') }}" 
                                  alt="{{ $label }} Environment" 
                                  class="absolute bottom-0 w-full h-48 object-cover transition-transform duration-300 rounded-b-2xl group-hover:scale-105">
                         </button>

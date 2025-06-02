@@ -14,8 +14,7 @@ class OrderController extends Controller
      */
     public function __construct()
     {
-        $this->middleware(['auth', 'active.user']);
-        $this->middleware('admin')->only(['adminIndex', 'adminShow', 'adminUpdate']);
+
     }
 
     /**

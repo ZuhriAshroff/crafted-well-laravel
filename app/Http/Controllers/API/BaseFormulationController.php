@@ -33,7 +33,7 @@ class BaseFormulationController extends Controller
             $skinType = $request->get('skin_type');
             $activeOnly = $request->get('active_only', true);
 
-            $query = BaseFormulation::with(['creator:user_id,first_name,last_name']);
+            $query = BaseFormulation::with(['creator:id,first_name,last_name']);
 
             if ($activeOnly) {
                 $query->active();
@@ -93,7 +93,7 @@ class BaseFormulationController extends Controller
             }
 
             $data = $validator->validated();
-            $data['created_by'] = $request->user()->user_id;
+            $data['created_by'] = $request->user()->id;
 
             // Create base formulation with validation
             $baseFormulation = BaseFormulation::createFormulation($data);
@@ -658,7 +658,7 @@ class BaseFormulationController extends Controller
     {
         try {
             $analyticsData = [
-                'user_id' => $user->user_id,
+                'id' => $user->id,
                 'action' => $action,
                 'timestamp' => now(),
                 'user_agent' => request()->userAgent(),

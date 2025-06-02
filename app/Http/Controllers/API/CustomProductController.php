@@ -31,7 +31,7 @@ class CustomProductController extends Controller
             $page = $request->get('page', 1);
             $perPage = min($request->get('per_page', 10), 50);
 
-            $customProducts = CustomProduct::forUser($user->user_id)
+            $customProducts = CustomProduct::forUser($user->id)
                 ->with(['baseProduct:product_id,product_name,base_category'])
                 ->orderBy('formulation_date', 'desc')
                 ->paginate($perPage, ['*'], 'page', $page);
@@ -69,10 +69,9 @@ class CustomProductController extends Controller
     {
         try {
             $user = $request->user();
-
-            // Validate the request data
+    
             $validator = Validator::make($request->all(), CustomProduct::validationRules());
-
+    
             if ($validator->fails()) {
                 return response()->json([
                     'status' => 'error',
@@ -80,10 +79,10 @@ class CustomProductController extends Controller
                     'errors' => $validator->errors()
                 ], 422);
             }
-
+    
             $data = $validator->validated();
-            $data['user_id'] = $user->user_id;
-
+            $data['user_id'] = $user->id; // ✅ FIXED: Use 'user_id' instead of 'id'
+    
             // Verify base product exists
             $baseProduct = Product::find($data['base_product_id']);
             if (!$baseProduct) {
@@ -92,33 +91,16 @@ class CustomProductController extends Controller
                     'message' => 'Base product not found'
                 ], 404);
             }
-
+    
             // Create custom product with intelligent formulation
             $customProduct = CustomProduct::createWithFormulation($data);
-
-            // Log custom product creation for analytics
-            $this->logCustomProductAnalytics($user, 'custom_product_created', [
-                'custom_product_id' => $customProduct->custom_product_id,
-                'base_product_id' => $customProduct->base_product_id,
-                'total_price' => $customProduct->total_price,
-                'skin_type' => $customProduct->profile_data['skin_type'],
-                'concerns' => $customProduct->profile_data['skin_concerns'],
-                'ingredients_count' => count($customProduct->selected_ingredients),
-            ]);
-
+    
             return response()->json([
                 'status' => 'success',
                 'message' => 'Custom product created successfully',
                 'data' => $customProduct->getFormattedDetails()
             ], 201);
-
-        } catch (ValidationException $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-
+    
         } catch (\Exception $e) {
             \Log::error('Error creating custom product: ' . $e->getMessage());
             return response()->json([
@@ -127,6 +109,7 @@ class CustomProductController extends Controller
             ], 500);
         }
     }
+    
 
     /**
      * Display the specified custom product.
@@ -136,7 +119,7 @@ class CustomProductController extends Controller
         try {
             $user = $request->user();
 
-            $customProduct = CustomProduct::forUser($user->user_id)
+            $customProduct = CustomProduct::forUser($user->id)
                 ->with(['baseProduct:product_id,product_name,base_category'])
                 ->findOrFail($customProductId);
 
@@ -173,7 +156,7 @@ class CustomProductController extends Controller
         try {
             $user = $request->user();
 
-            $customProduct = CustomProduct::forUser($user->user_id)->findOrFail($customProductId);
+            $customProduct = CustomProduct::forUser($user->id)->findOrFail($customProductId);
 
             // Validate update data
             $validator = Validator::make($request->all(), CustomProduct::validationRules(true));
@@ -234,7 +217,7 @@ class CustomProductController extends Controller
         try {
             $user = $request->user();
 
-            $customProduct = CustomProduct::forUser($user->user_id)->findOrFail($customProductId);
+            $customProduct = CustomProduct::forUser($user->id)->findOrFail($customProductId);
 
             // Check if product is in any active orders
             $activeOrders = $customProduct->orders()
@@ -313,12 +296,12 @@ class CustomProductController extends Controller
             $user = $request->user();
 
             $stats = [
-                'total_custom_products' => CustomProduct::getUserProductsCount($user->user_id),
-                'recent_products' => CustomProduct::getRecentForUser($user->user_id, 3),
-                'favorite_skin_type' => $this->getUserFavoriteSkinType($user->user_id),
-                'most_common_concerns' => $this->getUserCommonConcerns($user->user_id),
-                'average_price' => $this->getUserAveragePrice($user->user_id),
-                'ingredient_usage' => $this->getUserIngredientStats($user->user_id),
+                'total_custom_products' => CustomProduct::getUserProductsCount($user->id),
+                'recent_products' => CustomProduct::getRecentForUser($user->id, 3),
+                'favorite_skin_type' => $this->getUserFavoriteSkinType($user->id),
+                'most_common_concerns' => $this->getUserCommonConcerns($user->id),
+                'average_price' => $this->getUserAveragePrice($user->id),
+                'ingredient_usage' => $this->getUserIngredientStats($user->id),
             ];
 
             return response()->json([
@@ -343,7 +326,7 @@ class CustomProductController extends Controller
         try {
             $user = $request->user();
 
-            $customProduct = CustomProduct::forUser($user->user_id)->findOrFail($customProductId);
+            $customProduct = CustomProduct::forUser($user->id)->findOrFail($customProductId);
 
             // Validate new profile data
             $validator = Validator::make($request->all(), [
@@ -420,7 +403,7 @@ class CustomProductController extends Controller
             $skinType = $request->get('skin_type');
             $search = $request->get('search');
 
-            $query = CustomProduct::with(['user:user_id,first_name,last_name,email', 'baseProduct']);
+            $query = CustomProduct::with(['user:id,first_name,last_name,email', 'baseProduct']);
 
             if ($skinType) {
                 $query->whereJsonContains('profile_data->skin_type', $skinType);
@@ -443,7 +426,7 @@ class CustomProductController extends Controller
             $formattedProducts = $customProducts->getCollection()->map(function ($product) {
                 $details = $product->getFormattedDetails();
                 $details['user'] = [
-                    'user_id' => $product->user->user_id,
+                    'id' => $product->user->id,
                     'name' => $product->user->name,
                     'email' => $product->user->email,
                 ];
@@ -607,7 +590,7 @@ class CustomProductController extends Controller
     {
         try {
             $analyticsData = [
-                'user_id' => $user->user_id,
+                'id' => $user->id,
                 'action' => $action,
                 'timestamp' => now(),
                 'user_agent' => request()->userAgent(),

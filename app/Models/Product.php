@@ -35,6 +35,9 @@ class Product extends Model
         'standard_price',
         'customization_price_modifier',
         'base_formulation_id',
+        'image_url',
+        'description',
+        'is_active',
     ];
 
     /**

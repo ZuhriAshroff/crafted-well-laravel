@@ -17,7 +17,22 @@ class AdminMiddleware
     {
         // Check if user is authenticated
         if (!auth()->check()) {
-            return $this->unauthorized($request, 'Authentication required');
+            // For admin routes, redirect directly to admin login (not user login)
+            if ($request->is('admin*')) {
+                return redirect()->route('admin.login')->with('info', 'Please login to access the admin panel');
+            }
+            
+            // For API requests, return JSON response
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'error' => 'Unauthorized',
+                    'message' => 'Authentication required',
+                    'redirect' => route('admin.login')
+                ], 401);
+            }
+            
+            // Default: redirect to admin login
+            return redirect()->route('admin.login')->with('info', 'Please login to access the admin panel');
         }
 
         $user = auth()->user();
@@ -25,35 +40,36 @@ class AdminMiddleware
         // Check if user account is active
         if (!$user->isActive()) {
             auth()->logout();
-            return $this->unauthorized($request, 'Account is inactive');
+            
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'error' => 'Account Inactive',
+                    'message' => 'Your account is inactive. Please contact support.',
+                    'redirect' => route('admin.login')
+                ], 403);
+            }
+            
+            return redirect()->route('admin.login')
+                ->with('error', 'Your account is inactive. Please contact support.');
         }
 
         // Check if user has admin role
         if (!$user->isAdmin()) {
-            return $this->unauthorized($request, 'Admin access required');
+            // Don't logout the user - they might be a valid regular user
+            
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'error' => 'Access Denied',
+                    'message' => 'Admin access required',
+                    'redirect' => route('admin.login')
+                ], 403);
+            }
+            
+            // Redirect to admin login with a clear message
+            return redirect()->route('admin.login')
+                ->with('warning', 'Admin privileges required. Please login with an admin account.');
         }
 
         return $next($request);
-    }
-
-    /**
-     * Handle unauthorized access
-     */
-    private function unauthorized(Request $request, string $message): Response
-    {
-        // For API requests, return JSON response
-        if ($request->expectsJson() || $request->is('api/*')) {
-            return response()->json([
-                'error' => 'Unauthorized',
-                'message' => $message
-            ], 403);
-        }
-
-        // For web requests, redirect or abort
-        if ($request->is('admin/*')) {
-            return redirect('/login')->with('error', $message);
-        }
-
-        abort(403, $message);
     }
 }

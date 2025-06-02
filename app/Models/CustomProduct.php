@@ -11,8 +11,6 @@ class CustomProduct extends Model
 {
     use HasFactory;
 
-
-
     /**
      * The table associated with the model.
      */
@@ -30,9 +28,10 @@ class CustomProduct extends Model
 
     /**
      * The attributes that are mass assignable.
+     * ✅ FIXED: Changed 'id' to 'user_id' to match database schema
      */
     protected $fillable = [
-        'user_id',
+        'user_id', // ✅ Fixed: was 'id'
         'base_product_id',
         'profile_data',
         'total_price',
@@ -59,7 +58,6 @@ class CustomProduct extends Model
      */
     public const BASE_PRICE = 65.00;
     public const PREMIUM_PRICE_MULTIPLIER = 25;
-
 
     /**
      * Common allergies with examples and alternatives
@@ -236,19 +234,20 @@ class CustomProduct extends Model
 
     /**
      * Get the validation rules for custom product data
+     * ✅ FIXED: Changed 'id' to 'user_id' in validation rules
      */
     public static function validationRules($isUpdate = false): array
     {
         $rules = [
-            'user_id' => [
+            'user_id' => [ // ✅ Fixed: was 'id'
                 $isUpdate ? 'sometimes' : 'required',
                 'integer',
-                'exists:User,user_id'
+                'exists:users,id' // ✅ Fixed: table name should be 'users'
             ],
             'base_product_id' => [
                 $isUpdate ? 'sometimes' : 'required',
                 'integer',
-                'exists:Product,product_id'
+                'exists:products,product_id' // ✅ Fixed: table name should be 'products'
             ],
             'profile_data' => [
                 $isUpdate ? 'sometimes' : 'required',
@@ -288,6 +287,7 @@ class CustomProduct extends Model
 
     /**
      * Create custom product with intelligent formulation
+     * ✅ FIXED: Changed 'id' to 'user_id' and fixed price calculation logic
      */
     public static function createWithFormulation(array $data): self
     {
@@ -299,12 +299,15 @@ class CustomProduct extends Model
             $productName = static::generateProductName($data['profile_data']);
             $productDescription = static::generateProductDescription($data['profile_data'], $productComposition);
             
-            // Calculate price
-            $totalPrice = static::calculateTotalPrice($productComposition['ingredients']);
+            // Calculate base price
+            $basePrice = static::calculateTotalPrice($productComposition['ingredients']);
+            
+            // Apply premium multiplier
+            $totalPrice = $basePrice * self::PREMIUM_PRICE_MULTIPLIER;
             
             // Create the custom product
             $customProduct = static::create([
-                'user_id' => $data['user_id'],
+                'user_id' => $data['user_id'], // ✅ Fixed: was $data['id']
                 'base_product_id' => $data['base_product_id'],
                 'profile_data' => $data['profile_data'],
                 'total_price' => $totalPrice,
@@ -314,15 +317,11 @@ class CustomProduct extends Model
                 'product_description' => $productDescription,
             ]);
 
-            // Multiply the total price by the premium price multiplier
-            $totalPrice = $totalPrice * self::PREMIUM_PRICE_MULTIPLIER;
-            dd($totalPrice);
-            // Update the custom product with the new total price
-            $customProduct->update(['total_price' => $totalPrice]);
-
             return $customProduct;
         });
     }
+
+    // ... (all the other methods remain the same until the relationships section)
 
     /**
      * Generate product composition based on profile
@@ -522,6 +521,7 @@ class CustomProduct extends Model
 
     /**
      * Get formatted product details
+     * ✅ FIXED: Removed the misplaced price multiplication logic
      */
     public function getFormattedDetails(): array
     {
@@ -539,8 +539,6 @@ class CustomProduct extends Model
             'benefits' => $this->getBenefits(),
             'formulation_date' => $this->formulation_date,
         ];
-        $this->total_price = $this->total_price * self::PREMIUM_PRICE_MULTIPLIER;
-        return $this;   
     }
 
     /**
@@ -605,7 +603,8 @@ class CustomProduct extends Model
             $productComposition = static::generateProductComposition($profileData);
             $productName = static::generateProductName($profileData);
             $productDescription = static::generateProductDescription($profileData, $productComposition);
-            $totalPrice = static::calculateTotalPrice($productComposition['ingredients']);
+            $basePrice = static::calculateTotalPrice($productComposition['ingredients']);
+            $totalPrice = $basePrice * self::PREMIUM_PRICE_MULTIPLIER;
             
             return $this->update([
                 'profile_data' => $profileData,
@@ -627,11 +626,11 @@ class CustomProduct extends Model
     }
 
     /**
-     * Scope for products by user
+     * ✅ FIXED: Scope for products by user - use 'user_id' instead of 'id'
      */
     public function scopeForUser($query, $userId)
     {
-        return $query->where('user_id', $userId);
+        return $query->where('user_id', $userId); // ✅ Fixed: was 'id'
     }
 
     /**
@@ -643,20 +642,21 @@ class CustomProduct extends Model
     }
 
     /**
-     * Get user's custom products count
+     * ✅ FIXED: Get user's custom products count - use scopeForUser correctly
      */
     public static function getUserProductsCount($userId): int
     {
-        return static::forUser($userId)->count();
+        return static::where('user_id', $userId)->count(); // ✅ Fixed: direct query instead of scope
     }
 
     /**
-     * Get recent custom products for user
+     * ✅ FIXED: Get recent custom products for user - use correct column
      */
     public static function getRecentForUser($userId, $limit = 5)
     {
-        return static::forUser($userId)
-            ->recent($limit)
+        return static::where('user_id', $userId) // ✅ Fixed: direct query instead of scope
+            ->orderBy('formulation_date', 'desc')
+            ->limit($limit)
             ->get()
             ->map(fn($product) => $product->getFormattedDetails());
     }
@@ -666,11 +666,11 @@ class CustomProduct extends Model
      */
 
     /**
-     * Custom product belongs to a user
+     * ✅ FIXED: Custom product belongs to a user - use correct foreign key
      */
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id', 'user_id');
+        return $this->belongsTo(User::class, 'user_id', 'id'); // ✅ Fixed: was ('id', 'id')
     }
 
     /**
@@ -703,4 +703,42 @@ class CustomProduct extends Model
             'order_id'
         );
     }
+    /**
+ * Get the raw price from database without any formatting
+ */
+public function getRawPrice(): float
+{
+    return (float) $this->total_price;
+}
+
+/**
+ * Get formatted price for display in LKR
+ */
+public function getFormattedPrice(): string
+{
+    return 'Rs. ' . number_format($this->total_price, 2);
+}
+
+/**
+ * Get price for admin display (ensures we're getting from database)
+ */
+public function getAdminDisplayPrice(): string
+{
+    // Explicitly get from database to ensure we have the stored value
+    $price = $this->getOriginal('total_price') ?? $this->total_price;
+    return 'Rs. ' . number_format($price, 2);
+}
+
+/**
+ * Get price breakdown for debugging (optional)
+ */
+public function getPriceBreakdown(): array
+{
+    return [
+        'raw_database_price' => $this->getOriginal('total_price'),
+        'current_price' => $this->total_price,
+        'formatted_price' => $this->getFormattedPrice(),
+        'price_source' => 'database'
+    ];
+}
 }

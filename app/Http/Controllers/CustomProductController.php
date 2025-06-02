@@ -63,7 +63,7 @@ public function store(Request $request): RedirectResponse
 
     try {
         $data = $request->validated();
-        $data['user_id'] = auth()->user()->id; // ✅ Use auth()->user()->id
+        $data['user_id'] = auth()->user()->id; // ✅ FIXED: Use 'user_id' instead of 'id'
 
         $customProduct = CustomProduct::createWithFormulation($data);
 
@@ -76,7 +76,6 @@ public function store(Request $request): RedirectResponse
             ->with('error', 'Failed to create custom product. Please try again.');
     }
 }
-
     /**
      * Display the specified custom product
      */
@@ -85,9 +84,9 @@ public function store(Request $request): RedirectResponse
         try {
             $user = auth()->user();
             
-            // Fix: Use $user->id (users table PK) to match custom_products.user_id (FK)
+            // ✅ FIXED: Use 'user_id' to match the foreign key column
             $customProduct = CustomProduct::where('custom_product_id', $customProductId)
-                ->where('user_id', $user->id) // ✅ users.id matches custom_products.user_id
+                ->where('user_id', $user->id) // ✅ Changed from 'id' to 'user_id'
                 ->with(['baseProduct'])
                 ->firstOrFail();
     
@@ -116,7 +115,7 @@ public function store(Request $request): RedirectResponse
     {
         $user = auth()->user();
         
-        $customProduct = CustomProduct::forUser($user->user_id)->findOrFail($customProductId);
+        $customProduct = CustomProduct::forUser($user->id)->findOrFail($customProductId);
 
         $baseProducts = Product::where('base_category', 'serum')
             ->orWhere('base_category', 'essence')
@@ -136,7 +135,7 @@ public function store(Request $request): RedirectResponse
     public function update(Request $request, $customProductId): RedirectResponse
     {
         $user = auth()->user();
-        $customProduct = CustomProduct::forUser($user->user_id)->findOrFail($customProductId);
+        $customProduct = CustomProduct::forUser($user->id)->findOrFail($customProductId);
 
         $request->validate(CustomProduct::validationRules(true));
 
@@ -169,7 +168,7 @@ public function store(Request $request): RedirectResponse
     {
         try {
             $user = auth()->user();
-            $customProduct = CustomProduct::forUser($user->user_id)->findOrFail($customProductId);
+            $customProduct = CustomProduct::forUser($user->id)->findOrFail($customProductId);
 
             // Check if product is in any active orders
             $activeOrders = $customProduct->orders()
@@ -197,7 +196,7 @@ public function store(Request $request): RedirectResponse
     public function reformulate($customProductId): View
     {
         $user = auth()->user();
-        $customProduct = CustomProduct::forUser($user->user_id)->findOrFail($customProductId);
+        $customProduct = CustomProduct::forUser($user->id)->findOrFail($customProductId);
 
         return view('custom-products.reformulate', [
             'customProduct' => $customProduct,
@@ -212,7 +211,7 @@ public function store(Request $request): RedirectResponse
     public function processReformulation(Request $request, $customProductId): RedirectResponse
     {
         $user = auth()->user();
-        $customProduct = CustomProduct::forUser($user->user_id)->findOrFail($customProductId);
+        $customProduct = CustomProduct::forUser($user->id)->findOrFail($customProductId);
 
         $request->validate([
             'profile_data' => 'required|array',
@@ -259,65 +258,85 @@ public function store(Request $request): RedirectResponse
      * Admin Routes
      */
 
-    /**
-     * Display all custom products for admin
-     */
-    public function adminIndex(Request $request): View
-    {
-        $query = CustomProduct::with(['user:user_id,first_name,last_name,email', 'baseProduct']);
-
-        // Apply filters
-        if ($request->skin_type) {
-            $query->whereJsonContains('profile_data->skin_type', $request->skin_type);
-        }
-
-        if ($request->search) {
-            $query->where(function($q) use ($request) {
-                $q->where('product_name', 'like', "%{$request->search}%")
-                  ->orWhereHas('user', function($userQuery) use ($request) {
-                      $userQuery->where('email', 'like', "%{$request->search}%")
-                               ->orWhere('first_name', 'like', "%{$request->search}%")
-                               ->orWhere('last_name', 'like', "%{$request->search}%");
-                  });
-            });
-        }
-
-        if ($request->price_range) {
-            switch ($request->price_range) {
-                case 'under_80':
-                    $query->where('total_price', '<', 80);
-                    break;
-                case '80_to_120':
-                    $query->whereBetween('total_price', [80, 120]);
-                    break;
-                case '120_to_160':
-                    $query->whereBetween('total_price', [120, 160]);
-                    break;
-                case 'over_160':
-                    $query->where('total_price', '>', 160);
-                    break;
-            }
-        }
-
-        $customProducts = $query->orderBy('formulation_date', 'desc')->paginate(20);
-
-        return view('admin.custom-products.index', [
-            'customProducts' => $customProducts,
-            'skinTypes' => ['dry', 'oily', 'combination', 'sensitive'],
-            'priceRanges' => [
-                'under_80' => 'Under $80',
-                '80_to_120' => '$80 - $120',
-                '120_to_160' => '$120 - $160',
-                'over_160' => 'Over $160'
-            ],
-            'currentFilters' => [
-                'skin_type' => $request->skin_type,
-                'search' => $request->search,
-                'price_range' => $request->price_range,
-            ]
-        ]);
-    }
-
+     public function adminIndex(Request $request): View
+     {
+         $query = CustomProduct::with(['user:id,first_name,last_name,email', 'baseProduct']);
+     
+         // Apply filters
+         if ($request->skin_type) {
+             $query->whereJsonContains('profile_data->skin_type', $request->skin_type);
+         }
+     
+         if ($request->search) {
+             $query->where(function($q) use ($request) {
+                 $q->where('product_name', 'like', "%{$request->search}%")
+                   ->orWhereHas('user', function($userQuery) use ($request) {
+                       $userQuery->where('email', 'like', "%{$request->search}%")
+                                ->orWhere('first_name', 'like', "%{$request->search}%")
+                                ->orWhere('last_name', 'like', "%{$request->search}%");
+                   });
+             });
+         }
+     
+         // ✅ FIXED: Updated price ranges for LKR currency
+         if ($request->price_range) {
+             switch ($request->price_range) {
+                 case 'under_80':
+                     $query->where('total_price', '<', 2000); // Under Rs. 2,000
+                     break;
+                 case '80_to_120':
+                     $query->whereBetween('total_price', [2000, 3000]); // Rs. 2,000 - 3,000
+                     break;
+                 case '120_to_160':
+                     $query->whereBetween('total_price', [3000, 4000]); // Rs. 3,000 - 4,000
+                     break;
+                 case 'over_160':
+                     $query->where('total_price', '>', 4000); // Over Rs. 4,000
+                     break;
+             }
+         }
+     
+         $customProducts = $query->orderBy('formulation_date', 'desc')->paginate(20);
+     
+         // Calculate stats
+         $monthlyCount = CustomProduct::whereMonth('formulation_date', now()->month)
+                                      ->whereYear('formulation_date', now()->year)
+                                      ->count();
+         
+         $averagePrice = CustomProduct::avg('total_price');
+         
+         $activeUsers = CustomProduct::distinct('user_id')->count('user_id');
+     
+         return view('admin.custom-products.index', [
+             'customProducts' => $customProducts,
+             'skinTypes' => ['dry', 'oily', 'combination', 'sensitive'],
+             'priceRanges' => [
+                 'under_80' => 'Under Rs. 2,000',
+                 '80_to_120' => 'Rs. 2,000 - 3,000',
+                 '120_to_160' => 'Rs. 3,000 - 4,000',
+                 'over_160' => 'Over Rs. 4,000'
+             ],
+             'currentFilters' => [
+                 'skin_type' => $request->skin_type,
+                 'search' => $request->search,
+                 'price_range' => $request->price_range,
+             ],
+             'monthlyCount' => $monthlyCount,
+             'averagePrice' => $averagePrice,
+             'activeUsers' => $activeUsers,
+         ]);
+     }
+     
+     // UPDATE the getPriceDistribution method:
+     private function getPriceDistribution(): array
+     {
+         return [
+             'under_80' => CustomProduct::where('total_price', '<', 2000)->count(),
+             '80_to_120' => CustomProduct::whereBetween('total_price', [2000, 3000])->count(),
+             '120_to_160' => CustomProduct::whereBetween('total_price', [3000, 4000])->count(),
+             'over_160' => CustomProduct::where('total_price', '>', 4000)->count(),
+         ];
+     }
     /**
      * Display custom product details for admin
      */
@@ -380,15 +399,6 @@ public function store(Request $request): RedirectResponse
         return array_slice($ingredients, 0, 10, true);
     }
 
-    private function getPriceDistribution(): array
-    {
-        return [
-            'under_80' => CustomProduct::where('total_price', '<', 80)->count(),
-            '80_to_120' => CustomProduct::whereBetween('total_price', [80, 120])->count(),
-            '120_to_160' => CustomProduct::whereBetween('total_price', [120, 160])->count(),
-            'over_160' => CustomProduct::where('total_price', '>', 160)->count(),
-        ];
-    }
 
     private function getAllergyStats(): array
     {
@@ -423,4 +433,107 @@ public function store(Request $request): RedirectResponse
             })
             ->toArray();
     }
+    public function exportData(Request $request)
+{
+    try {
+        $query = CustomProduct::with(['user:id,first_name,last_name,email', 'baseProduct']);
+
+        // Apply same filters as index
+        if ($request->skin_type) {
+            $query->whereJsonContains('profile_data->skin_type', $request->skin_type);
+        }
+
+        if ($request->search) {
+            $query->where(function($q) use ($request) {
+                $q->where('product_name', 'like', "%{$request->search}%")
+                  ->orWhereHas('user', function($userQuery) use ($request) {
+                      $userQuery->where('email', 'like', "%{$request->search}%")
+                               ->orWhere('first_name', 'like', "%{$request->search}%")
+                               ->orWhere('last_name', 'like', "%{$request->search}%");
+                  });
+            });
+        }
+
+        if ($request->price_range) {
+            switch ($request->price_range) {
+                case 'under_80':
+                    $query->where('total_price', '<', 2000);
+                    break;
+                case '80_to_120':
+                    $query->whereBetween('total_price', [2000, 3000]);
+                    break;
+                case '120_to_160':
+                    $query->whereBetween('total_price', [3000, 4000]);
+                    break;
+                case 'over_160':
+                    $query->where('total_price', '>', 4000);
+                    break;
+            }
+        }
+
+        $products = $query->orderBy('formulation_date', 'desc')->get();
+
+        // Prepare CSV data
+        $csvData = [];
+        $csvData[] = [
+            'ID',
+            'Product Name',
+            'User Name',
+            'User Email',
+            'Skin Type',
+            'Skin Concerns',
+            'Price (LKR)',
+            'Ingredients Count',
+            'Environmental Factor',
+            'Created Date'
+        ];
+
+        foreach ($products as $product) {
+            $userName = 'N/A';
+            $userEmail = 'N/A';
+            
+            if ($product->user) {
+                $userName = ($product->user->first_name && $product->user->last_name) 
+                    ? $product->user->first_name . ' ' . $product->user->last_name 
+                    : ($product->user->name ?? 'N/A');
+                $userEmail = $product->user->email ?? 'N/A';
+            }
+
+            $csvData[] = [
+                $product->custom_product_id,
+                $product->product_name,
+                $userName,
+                $userEmail,
+                ucfirst($product->profile_data['skin_type'] ?? 'Unknown'),
+                implode(', ', array_map('ucfirst', $product->profile_data['skin_concerns'] ?? [])),
+                number_format($product->total_price, 2),
+                count($product->selected_ingredients ?? []),
+                ucfirst($product->profile_data['environmental_factors'] ?? 'N/A'),
+                $product->formulation_date->format('Y-m-d H:i:s')
+            ];
+        }
+
+        // Generate CSV
+        $filename = 'custom_products_' . date('Y-m-d_H-i-s') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($csvData) {
+            $file = fopen('php://output', 'w');
+            foreach ($csvData as $row) {
+                fputcsv($file, $row);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+
+    } catch (\Exception $e) {
+        \Log::error('Error exporting custom products: ' . $e->getMessage());
+        return back()->with('error', 'Failed to export data. Please try again.');
+    }
+}
 }

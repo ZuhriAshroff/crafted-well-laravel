@@ -86,27 +86,28 @@
             </div>
         </div>
 
-        <!-- Circular Image Section -->
-        <div class="relative max-w-xl mx-auto mt-16">
-            <!-- Outer Circle -->
-            <div class="aspect-square relative">
-                <!-- Pink circle background with pulse animation -->
-                <div class="absolute inset-0 rounded-full border-2 border-pink-300 pulse-animation"></div>
-                
-                <!-- Product image container -->
-                <div class="absolute inset-12 rounded-full border-2 border-pink-300 bg-pink-50 
-                           flex items-center justify-center overflow-hidden shadow-lg">
-                    <img src="{{ asset('images/hero.png') }}" 
-                         alt="Custom Skincare Product"
-                         class="w-50 h-auto float-animation">
-                </div>
-                
-                <!-- Decorative elements -->
-                <div class="absolute top-4 right-4 w-4 h-4 bg-pink-400 rounded-full opacity-70"></div>
-                <div class="absolute bottom-8 left-8 w-3 h-3 bg-orange-300 rounded-full opacity-70"></div>
-                <div class="absolute top-1/3 left-2 w-2 h-2 bg-pink-300 rounded-full opacity-60"></div>
-            </div>
+<!-- Circular Image Section -->
+<div class="relative max-w-xl mx-auto mt-16">
+    <!-- Outer Circle -->
+    <div class="aspect-square relative">
+        <!-- Pink circle background with pulse animation -->
+        <div class="absolute inset-0 rounded-full border-2 border-pink-300 pulse-animation"></div>
+        
+        <!-- Product image container -->
+        <div class="absolute inset-x-12 inset-y-10 rounded-full border-2 border-pink-300 bg-pink-50 
+                   flex items-center justify-center overflow-hidden shadow-lg">
+            <img src="{{ asset('images/hero.png') }}" 
+                 alt="Custom Skincare Product"
+                 class="w-50 h-auto float-animation">
         </div>
+        
+        <!-- Decorative elements -->
+        <div class="absolute top-4 right-4 w-4 h-4 bg-pink-400 rounded-full opacity-70"></div>
+        <div class="absolute bottom-8 left-8 w-3 h-3 bg-orange-300 rounded-full opacity-70"></div>
+        <div class="absolute top-1/3 left-2 w-2 h-2 bg-pink-300 rounded-full opacity-60"></div>
+    </div>
+</div>
+
 
         <!-- Features Section -->
         <div class="mt-24 max-w-6xl mx-auto">

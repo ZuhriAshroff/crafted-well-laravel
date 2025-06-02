@@ -1,4 +1,4 @@
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
+<nav x-data="{ open: false }" class="bg-white border-b border-gray-100 shadow-sm">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
@@ -6,7 +6,7 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('home') }}">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                        <img src="{{ asset('images/Crafted Well Logo (2).png') }}"  class="block h-9 w-auto fill-current text-gray-800" />
                     </a>
                 </div>
 
@@ -18,9 +18,17 @@
                     <x-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
                         {{ __('Products') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('survey.index')" :active="request()->routeIs('survey.*')">
-                        {{ __('Skin Survey') }}
-                    </x-nav-link>
+                    @auth
+                        @if(auth()->user()->role !== 'admin')
+                            <x-nav-link :href="route('survey.index')" :active="request()->routeIs('survey.*')">
+                                {{ __('Skin Survey') }}
+                            </x-nav-link>
+                        @endif
+                    @else
+                        <x-nav-link :href="route('survey.index')" :active="request()->routeIs('survey.*')">
+                            {{ __('Skin Survey') }}
+                        </x-nav-link>
+                    @endauth
                 </div>
             </div>
 
@@ -36,6 +44,11 @@
                                 <span class="inline-flex rounded-md">
                                     <button type="button" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none focus:bg-gray-50 active:bg-gray-50 transition ease-in-out duration-150">
                                         {{ Auth::user()->name }}
+                                        @if(auth()->user()->role === 'admin')
+                                            <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                                Admin
+                                            </span>
+                                        @endif
 
                                         <svg class="ml-2 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
@@ -46,23 +59,47 @@
                         </x-slot>
 
                         <x-slot name="content">
-                            <x-dropdown-link :href="route('dashboard')">
-                                <div class="flex items-center">
-                                    <i class="fas fa-tachometer-alt w-4 h-4 mr-2 text-gray-400"></i>
-                                    {{ __('Dashboard') }}
-                                </div>
-                            </x-dropdown-link>
+                            <!-- Role-based Dashboard Link -->
+                            @if(auth()->user()->role === 'admin')
+                                <x-dropdown-link :href="route('admin.dashboard')">
+                                    <div class="flex items-center">
+                                        <!-- <i class="fas fa-crown w-4 h-4 mr-2 text-purple-500"></i> -->
+                                        {{ __('Admin Dashboard') }}
+                                    </div>
+                                </x-dropdown-link>
+                                
+                                <x-dropdown-link :href="route('admin.custom-products.index')">
+                                    <div class="flex items-center">
+                                        <!-- <i class="fas fa-flask w-4 h-4 mr-2 text-pink-500"></i> -->
+                                        {{ __('Manage Custom Products') }}
+                                    </div>
+                                </x-dropdown-link>
 
-                            <x-dropdown-link :href="route('custom-products.index')">
-                                <div class="flex items-center">
-                                    <i class="fas fa-flask w-4 h-4 mr-2 text-pink-500"></i>
-                                    {{ __('My Custom Products') }}
-                                </div>
-                            </x-dropdown-link>
+                                <x-dropdown-link :href="route('admin.custom-products.analytics')">
+                                    <div class="flex items-center">
+                                        <!-- <i class="fas fa-chart-bar w-4 h-4 mr-2 text-blue-500"></i> -->
+                                        {{ __('Analytics') }}
+                                    </div>
+                                </x-dropdown-link>
+                            @else
+                                <x-dropdown-link :href="route('user.dashboard')">
+                                    <div class="flex items-center">
+                                        <!-- <i class="fas fa-tachometer-alt w-4 h-4 mr-2 text-gray-400"></i> -->
+                                        {{ __('Dashboard') }}
+                                    </div>
+                                </x-dropdown-link>
+
+                                <x-dropdown-link :href="route('custom-products.index')">
+                                    <div class="flex items-center">
+                                        <!-- <i class="fas fa-flask w-4 h-4 mr-2 text-pink-500"></i> -->
+                                        {{ __('My Custom Products') }}
+                                    </div>
+                                </x-dropdown-link>
+                            @endif
 
                             <x-dropdown-link :href="route('profile.show')">
                                 <div class="flex items-center">
-                                    <i class="fas fa-user w-4 h-4 mr-2 text-gray-400"></i>
+                                    <!-- <i class="fas fa-user w-4 h-4 mr-2 text-gray-400"></i> -->
                                     {{ __('Profile') }}
                                 </div>
                             </x-dropdown-link>
@@ -82,8 +119,8 @@
                     </x-dropdown>
                 @else
                     <div class="space-x-4">
-                        <a href="{{ route('login') }}" class="text-sm text-gray-700 hover:text-gray-900">Log in</a>
-                        <a href="{{ route('register') }}" class="text-sm text-gray-700 hover:text-gray-900">Register</a>
+                        <a href="{{ route('login') }}" class="text-sm text-gray-700 hover:text-gray-900 transition">Log in</a>
+                        <a href="{{ route('register') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 transition duration-150 ease-in-out shadow-sm">Register</a>
                     </div>
                 @endauth
             </div>
@@ -109,9 +146,17 @@
             <x-responsive-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
                 {{ __('Products') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('survey.index')" :active="request()->routeIs('survey.*')">
-                {{ __('Skin Survey') }}
-            </x-responsive-nav-link>
+            @auth
+                @if(auth()->user()->role !== 'admin')
+                    <x-responsive-nav-link :href="route('survey.index')" :active="request()->routeIs('survey.*')">
+                        {{ __('Skin Survey') }}
+                    </x-responsive-nav-link>
+                @endif
+            @else
+                <x-responsive-nav-link :href="route('survey.index')" :active="request()->routeIs('survey.*')">
+                    {{ __('Skin Survey') }}
+                </x-responsive-nav-link>
+            @endauth
         </div>
 
         <!-- Responsive Settings Options -->
@@ -125,25 +170,56 @@
                     @endif
 
                     <div>
-                        <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
+                        <div class="font-medium text-base text-gray-800 flex items-center">
+                            {{ Auth::user()->name }}
+                            @if(auth()->user()->role === 'admin')
+                                <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                    Admin
+                                </span>
+                            @endif
+                        </div>
                         <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
                     </div>
                 </div>
 
                 <div class="mt-3 space-y-1">
-                    <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        <div class="flex items-center">
-                            <i class="fas fa-tachometer-alt w-4 h-4 mr-2 text-gray-400"></i>
-                            {{ __('Dashboard') }}
-                        </div>
-                    </x-responsive-nav-link>
+                    <!-- Role-based Dashboard Link -->
+                    @if(auth()->user()->role === 'admin')
+                        <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">
+                            <div class="flex items-center">
+                                <i class="fas fa-crown w-4 h-4 mr-2 text-purple-500"></i>
+                                {{ __('Admin Dashboard') }}
+                            </div>
+                        </x-responsive-nav-link>
 
-                    <x-responsive-nav-link :href="route('custom-products.index')" :active="request()->routeIs('custom-products.*')">
-                        <div class="flex items-center">
-                            <i class="fas fa-flask w-4 h-4 mr-2 text-pink-500"></i>
-                            {{ __('My Custom Products') }}
-                        </div>
-                    </x-responsive-nav-link>
+                        <x-responsive-nav-link :href="route('admin.custom-products.index')" :active="request()->routeIs('admin.custom-products.*')">
+                            <div class="flex items-center">
+                                <i class="fas fa-flask w-4 h-4 mr-2 text-pink-500"></i>
+                                {{ __('Manage Custom Products') }}
+                            </div>
+                        </x-responsive-nav-link>
+
+                        <x-responsive-nav-link :href="route('admin.custom-products.analytics')" :active="request()->routeIs('admin.custom-products.analytics')">
+                            <div class="flex items-center">
+                                <i class="fas fa-chart-bar w-4 h-4 mr-2 text-blue-500"></i>
+                                {{ __('Analytics') }}
+                            </div>
+                        </x-responsive-nav-link>
+                    @else
+                        <x-responsive-nav-link :href="route('user.dashboard')" :active="request()->routeIs('user.dashboard')">
+                            <div class="flex items-center">
+                                <i class="fas fa-tachometer-alt w-4 h-4 mr-2 text-gray-400"></i>
+                                {{ __('Dashboard') }}
+                            </div>
+                        </x-responsive-nav-link>
+
+                        <x-responsive-nav-link :href="route('custom-products.index')" :active="request()->routeIs('custom-products.*')">
+                            <div class="flex items-center">
+                                <i class="fas fa-flask w-4 h-4 mr-2 text-pink-500"></i>
+                                {{ __('My Custom Products') }}
+                            </div>
+                        </x-responsive-nav-link>
+                    @endif
 
                     <x-responsive-nav-link :href="route('profile.show')" :active="request()->routeIs('profile.show')">
                         <div class="flex items-center">

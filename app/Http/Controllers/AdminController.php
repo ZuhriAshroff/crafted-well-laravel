@@ -9,8 +9,13 @@ use App\Models\CustomProduct;
 use App\Models\BaseFormulation;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 
 class AdminController extends Controller
 {
@@ -19,8 +24,197 @@ class AdminController extends Controller
      */
     public function __construct()
     {
-        $this->middleware(['auth', 'admin']);
     }
+
+    // ========================================
+    // AUTHENTICATION METHODS
+    // ========================================
+
+    /**
+     * Show the admin login form
+     */
+    public function showLoginForm(): View
+    {
+        return view('admin.auth.login');
+    }
+
+    /**
+     * Handle admin login attempt
+     */
+    public function login(Request $request): JsonResponse
+    {
+        // Rate limiting
+        $key = Str::transliterate(Str::lower($request->input('email')).'|'.$request->ip());
+        
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+            return response()->json([
+                'status' => 'error',
+                'message' => "Too many login attempts. Please try again in {$seconds} seconds."
+            ], 429);
+        }
+
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        try {
+            // Find user by email
+            $user = User::where('email', $request->email)->first();
+            
+            if (!$user || !Hash::check($request->password, $user->password)) {
+                RateLimiter::hit($key);
+                
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid credentials'
+                ], 401);
+            }
+
+            // Check if user is active
+            if (!$user->isActive()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Account is inactive. Please contact support.'
+                ], 403);
+            }
+
+            // Check if user has admin privileges
+            if (!$user->isAdmin()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Admin access required'
+                ], 403);
+            }
+
+            // Clear rate limiter on successful login
+            RateLimiter::clear($key);
+
+            // Login the user
+            Auth::login($user, $request->boolean('remember'));
+
+            // Create API token for session
+            $token = $user->createToken('admin-session')->plainTextToken;
+
+            // Log admin login
+            \Log::info('Admin login successful', [
+                'id' => $user->id,
+                'email' => $user->email,
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Login successful',
+                'data' => [
+                    'token' => $token,
+                    'user' => [
+                        'id' => $user->id,
+                        'email' => $user->email,
+                        'name' => $user->name,
+                        'role' => $user->role,
+                    ]
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Admin login error: ' . $e->getMessage(), [
+                'email' => $request->email,
+                'ip' => $request->ip()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Login failed. Please try again.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Handle admin logout
+     */
+    public function logout(Request $request): JsonResponse|RedirectResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            // Revoke all tokens for this user
+            if ($user) {
+                $user->tokens()->delete();
+                
+                \Log::info('Admin logout', [
+                    'id' => $user->id,
+                    'email' => $user->email,
+                    'ip' => $request->ip()
+                ]);
+            }
+
+            // Logout
+            Auth::logout();
+            
+            // Invalidate session
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            // Handle JSON requests (API)
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Logged out successfully'
+                ]);
+            }
+
+            // Redirect for web requests
+            return redirect()->route('admin.login')
+                ->with('success', 'Logged out successfully');
+
+        } catch (\Exception $e) {
+            \Log::error('Admin logout error: ' . $e->getMessage());
+            
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Logout failed'
+                ], 500);
+            }
+
+            return redirect()->route('admin.login')
+                ->with('error', 'Logout failed');
+        }
+    }
+
+    /**
+     * Check authentication status
+     */
+    public function checkAuth(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        
+        if (!$user || !$user->isAdmin()) {
+            return response()->json([
+                'status' => 'error',
+                'authenticated' => false,
+                'message' => 'Not authenticated'
+            ], 401);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'authenticated' => true,
+            'user' => [
+                'id' => $user->id,
+                'email' => $user->email,
+                'name' => $user->name,
+                'role' => $user->role,
+            ]
+        ]);
+    }
+
+    // ========================================
+    // DASHBOARD METHODS (Keep all your existing methods)
+    // ========================================
 
     /**
      * Admin dashboard with comprehensive analytics
@@ -169,7 +363,7 @@ class AdminController extends Controller
                 'api_rate_limit' => 1000,
             ],
             'business' => [
-                'base_product_price' => CustomProduct::BASE_PRICE,
+                'base_product_price' => CustomProduct::BASE_PRICE ?? 5000,
                 'max_custom_products_per_user' => 10,
                 'auto_approve_orders' => false,
             ],
@@ -214,6 +408,10 @@ class AdminController extends Controller
             ], 500);
         }
     }
+
+    // ========================================
+    // KEEP ALL YOUR EXISTING PRIVATE METHODS
+    // ========================================
 
     /**
      * Private helper methods for analytics
@@ -309,7 +507,7 @@ class AdminController extends Controller
     private function getRecentActivity(): array
     {
         return [
-            'recent_orders' => Order::with('user:user_id,first_name,last_name,email')
+            'recent_orders' => Order::with('user:id,first_name,last_name,email')
                 ->orderBy('order_date', 'desc')
                 ->limit(5)
                 ->get()
@@ -324,16 +522,16 @@ class AdminController extends Controller
                 }),
             'recent_users' => User::orderBy('created_at', 'desc')
                 ->limit(5)
-                ->get(['user_id', 'first_name', 'last_name', 'email', 'created_at'])
+                ->get(['id', 'first_name', 'last_name', 'email', 'created_at'])
                 ->map(function($user) {
                     return [
-                        'id' => $user->user_id,
+                        'id' => $user->id,
                         'name' => $user->name,
                         'email' => $user->email,
                         'joined' => $user->created_at,
                     ];
                 }),
-            'recent_custom_products' => CustomProduct::with('user:user_id,first_name,last_name')
+            'recent_custom_products' => CustomProduct::with('user:id,first_name,last_name')
                 ->orderBy('formulation_date', 'desc')
                 ->limit(5)
                 ->get()
@@ -370,7 +568,7 @@ class AdminController extends Controller
                 }], 'total_amount')
                 ->orderBy('orders_sum_total_amount', 'desc')
                 ->limit(5)
-                ->get(['user_id', 'first_name', 'last_name', 'email'])
+                ->get(['id', 'first_name', 'last_name', 'email'])
                 ->map(function($user) {
                     return [
                         'name' => $user->name,
