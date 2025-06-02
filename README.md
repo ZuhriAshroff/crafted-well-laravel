@@ -67,3 +67,4 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 # Trigger deployment
 # Enable debug mode
 # Fix database connection with public host
+# Debug asset files
