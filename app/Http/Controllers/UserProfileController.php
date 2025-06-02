@@ -164,6 +164,8 @@ class UserProfileController extends Controller
             'completion_average' => $profiles->avg(fn($p) => $p->getCompletionPercentage()),
             'skin_types' => $profiles->groupBy('skin_type')->map->count(),
             'concerns' => $profiles->pluck('primary_skin_concerns')->groupBy(fn($item) => $item)->map->count(),
+            'total_orders' => $user->orders()->count(),
+
         ];
         
         return view('profile.analytics', [

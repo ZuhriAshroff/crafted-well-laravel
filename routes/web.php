@@ -6,6 +6,8 @@ use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\CustomProductController;
 use App\Http\Controllers\BaseFormulationController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\AdminController;
 use App\Livewire\SurveyComponent;
 
@@ -151,16 +153,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ========================================
     // CART & CHECKOUT ROUTES (uncomment as needed)
     // ========================================
-    /*
-    Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+    
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-    Route::patch('/cart/update/{id}', [CartController::class, 'update'])->name('cart.update');
+    Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+    Route::put('/cart/update/{id}', [CartController::class, 'update'])->name('cart.update');
     Route::delete('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
-    Route::post('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
-
+    Route::delete('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
+    
+    // Checkout routes
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
-    */
+    Route::get('/checkout/success', [CheckoutController::class, 'success'])->name('checkout.success');
+    
 
     // ========================================
     // WISHLIST & ACCOUNT ROUTES (uncomment as needed)

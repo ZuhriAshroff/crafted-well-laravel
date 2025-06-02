@@ -32,8 +32,21 @@
                 </div>
             </div>
 
-            <div class="hidden sm:flex sm:items-center sm:ml-6">
+            <div class="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
                 @auth
+                    <!-- Cart Icon (only for non-admin users) -->
+                    @if(auth()->user()->role !== 'admin')
+                        <a href="{{ route('cart.index') }}" class="relative p-2 text-gray-600 hover:text-pink-600 transition-colors duration-200">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 5.5M7 13v8a2 2 0 002 2h10a2 2 0 002-2v-8m-10 0V9a2 2 0 012-2h6a2 2 0 012 2v4.01"></path>
+                            </svg>
+                            <!-- Cart Counter -->
+                            <span id="cartCounter" class="absolute -top-1 -right-1 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                                {{ session('cart') ? array_sum(array_column(session('cart'), 'quantity')) : 0 }}
+                            </span>
+                        </a>
+                    @endif
+
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
                             @if (Laravel\Jetstream\Jetstream::managesProfilePhotos())
@@ -95,6 +108,19 @@
                                         {{ __('My Custom Products') }}
                                     </div>
                                 </x-dropdown-link>
+
+                                <!-- Cart Link in Dropdown for Easy Access -->
+                                <x-dropdown-link :href="route('cart.index')">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-shopping-cart w-4 h-4 mr-2 text-pink-500"></i>
+                                        {{ __('Shopping Cart') }}
+                                        @if(session('cart') && count(session('cart')) > 0)
+                                            <span class="ml-auto bg-pink-100 text-pink-600 text-xs px-2 py-0.5 rounded-full">
+                                                {{ array_sum(array_column(session('cart'), 'quantity')) }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                </x-dropdown-link>
                             @endif
 
                             <x-dropdown-link :href="route('profile.show')">
@@ -150,6 +176,20 @@
                 @if(auth()->user()->role !== 'admin')
                     <x-responsive-nav-link :href="route('survey.index')" :active="request()->routeIs('survey.*')">
                         {{ __('Skin Survey') }}
+                    </x-responsive-nav-link>
+                    <!-- Mobile Cart Link -->
+                    <x-responsive-nav-link :href="route('cart.index')" :active="request()->routeIs('cart.*')">
+                        <div class="flex items-center justify-between">
+                            <span class="flex items-center">
+                                <i class="fas fa-shopping-cart w-4 h-4 mr-2 text-pink-500"></i>
+                                {{ __('Shopping Cart') }}
+                            </span>
+                            @if(session('cart') && count(session('cart')) > 0)
+                                <span class="bg-pink-100 text-pink-600 text-xs px-2 py-0.5 rounded-full">
+                                    {{ array_sum(array_column(session('cart'), 'quantity')) }}
+                                </span>
+                            @endif
+                        </div>
                     </x-responsive-nav-link>
                 @endif
             @else
@@ -253,3 +293,22 @@
         @endauth
     </div>
 </nav>
+
+<!-- Optional: Add this script to update cart counter dynamically -->
+<script>
+    // Function to update cart counter
+    function updateCartCounter(count) {
+        const counter = document.getElementById('cartCounter');
+        if (counter) {
+            counter.textContent = count;
+            if (count > 0) {
+                counter.classList.remove('hidden');
+            } else {
+                counter.classList.add('hidden');
+            }
+        }
+    }
+
+    // Listen for cart updates (you can call this from your add to cart functions)
+    window.updateCartCounter = updateCartCounter;
+</script>

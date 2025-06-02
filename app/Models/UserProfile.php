@@ -30,6 +30,7 @@ class UserProfile extends Model
      */
     protected $fillable = [
         'id',
+        'user_id',
         'skin_type',
         'primary_skin_concerns',
         'secondary_skin_concerns',
