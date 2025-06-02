@@ -223,155 +223,154 @@
     </div>
 
     <script>
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+// Replace your admin login JavaScript with this:
 
-        async function loadAnalytics(period = '30days') {
-            const loading = document.getElementById('loading');
-            loading.classList.remove('hidden');
-
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            
+            // Show loading state
+            submitButton.disabled = true;
+            submitButton.textContent = 'Signing in...';
+            
+            // Clear previous errors
+            clearErrors();
+            
             try {
-                const response = await fetch(`{{ route('admin.analytics') }}?period=${period}`, {
+                // Use relative URL instead of absolute HTTP URL
+                const response = await fetch('/admin/login', {
+                    method: 'POST',
+                    body: formData,
                     headers: {
-                        'X-CSRF-TOKEN': csrfToken,
+                        'X-CSRF-TOKEN': getCSRFToken(),
                         'Accept': 'application/json'
                     }
                 });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    updateDashboard(data.data);
+                
+                const result = await response.json();
+                
+                if (response.ok && (result.success || result.status === 'success')) {
+                    // Show success message
+                    showSuccess('Login successful! Redirecting...');
+                    
+                    // Redirect to admin dashboard
+                    setTimeout(() => {
+                        window.location.href = result.redirect || '/admin/dashboard';
+                    }, 1000);
+                } else if (response.status === 422) {
+                    // Validation errors
+                    if (result.errors) {
+                        // Show validation errors
+                        const errorMessages = Object.values(result.errors).flat();
+                        showError(errorMessages.join('<br>'));
+                    } else {
+                        showError(result.message || 'Validation failed. Please check your input.');
+                    }
+                } else if (response.status === 419) {
+                    // CSRF token expired
+                    showError('Session expired. Please refresh the page and try again.');
+                    setTimeout(() => window.location.reload(), 2000);
                 } else {
-                    console.error('Failed to load analytics');
+                    // Other errors
+                    showError(result.message || 'Login failed. Please try again.');
                 }
+                
             } catch (error) {
-                console.error('Error loading analytics:', error);
+                console.error('Login error:', error);
+                
+                if (error.message.includes('Failed to fetch')) {
+                    showError('Network error. Please check your connection and try again.');
+                } else {
+                    showError('Login failed. Please try again.');
+                }
             } finally {
-                loading.classList.add('hidden');
+                // Reset button state
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
             }
-        }
-
-        function updateDashboard(analytics) {
-            // Update overview stats
-            if (analytics.overview) {
-                const stats = document.getElementById('overviewStats');
-                stats.innerHTML = `
-                    <div class="bg-indigo-100 overflow-hidden shadow rounded-lg">
-                        <div class="px-4 py-5 sm:p-6">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Total Users</dt>
-                                <dd class="mt-1 text-3xl font-semibold text-gray-900">${analytics.overview.total_users}</dd>
-                            </dl>
-                        </div>
-                    </div>
-                    <div class="bg-pink-100 overflow-hidden shadow rounded-lg">
-                        <div class="px-4 py-5 sm:p-6">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Total Orders</dt>
-                                <dd class="mt-1 text-3xl font-semibold text-gray-900">${analytics.overview.total_orders}</dd>
-                            </dl>
-                        </div>
-                    </div>
-                    <div class="bg-yellow-100 overflow-hidden shadow rounded-lg">
-                        <div class="px-4 py-5 sm:p-6">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Total Products</dt>
-                                <dd class="mt-1 text-3xl font-semibold text-gray-900">${analytics.overview.total_products}</dd>
-                            </dl>
-                        </div>
-                    </div>
-                    <div class="bg-green-100 overflow-hidden shadow rounded-lg">
-                        <div class="px-4 py-5 sm:p-6">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Revenue Today</dt>
-                                <dd class="mt-1 text-3xl font-semibold text-gray-900">LKR ${Number(analytics.overview.revenue_today).toLocaleString('en-US', {minimumFractionDigits: 2})}</dd>
-                            </dl>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Update growth metrics
-            if (analytics.growth_metrics) {
-                const metrics = document.getElementById('growthMetrics');
-                let metricsHtml = '';
-                Object.entries(analytics.growth_metrics).forEach(([key, value]) => {
-                    const color = value >= 0 ? 'text-green-600' : 'text-red-600';
-                    const sign = value >= 0 ? '+' : '';
-                    metricsHtml += `
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-600 capitalize">${key.replace(/_/g, ' ')}</span>
-                            <span class="text-sm font-medium ${color}">${sign}${Number(value).toFixed(1)}%</span>
-                        </div>
-                    `;
-                });
-                metrics.innerHTML = metricsHtml;
-            }
-        }
-
-        function changePeriod() {
-            const period = document.getElementById('periodSelector').value;
-            loadAnalytics(period);
-        }
-
-        async function showSystemHealth() {
-            const modal = document.getElementById('systemHealthModal');
-            const content = document.getElementById('systemHealthContent');
-            
-            modal.classList.remove('hidden');
-            
-            try {
-                const response = await fetch('{{ route("admin.system-health") }}', {
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    displaySystemHealth(data.data);
-                } else {
-                    content.innerHTML = '<p class="text-red-600">Failed to check system health</p>';
-                }
-            } catch (error) {
-                content.innerHTML = '<p class="text-red-600">Error checking system health</p>';
-            }
-        }
-
-        function displaySystemHealth(health) {
-            const content = document.getElementById('systemHealthContent');
-            let healthHtml = '';
-            
-            Object.entries(health).forEach(([component, status]) => {
-                if (component === 'overall_status') return;
-                
-                const statusColor = status.status === 'healthy' ? 'text-green-600' : 
-                                   status.status === 'warning' ? 'text-yellow-600' : 'text-red-600';
-                
-                healthHtml += `
-                    <div class="mb-3 p-3 border rounded">
-                        <div class="flex justify-between items-center">
-                            <span class="font-medium capitalize">${component}</span>
-                            <span class="${statusColor} font-medium">${status.status}</span>
-                        </div>
-                        <p class="text-sm text-gray-600 mt-1">${status.message}</p>
-                    </div>
-                `;
-            });
-            
-            content.innerHTML = healthHtml;
-        }
-
-        function hideSystemHealth() {
-            document.getElementById('systemHealthModal').classList.add('hidden');
-        }
-
-        // Load initial analytics on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Only load if we don't have server-side data
-            @if(!isset($analytics))
-                loadAnalytics();
-            @endif
         });
+    }
+});
+
+// Helper function to get CSRF token
+function getCSRFToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (!metaTag) {
+        console.error('CSRF token meta tag not found. Make sure your layout includes the CSRF meta tag.');
+        return '';
+    }
+    return metaTag.content;
+}
+
+// Show error message
+function showError(message) {
+    clearErrors();
+    
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4';
+    errorDiv.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-circle mr-2"></i>
+            <div>${message}</div>
+        </div>
+    `;
+    
+    const form = document.getElementById('loginForm');
+    if (form) {
+        form.insertBefore(errorDiv, form.firstChild);
+    }
+}
+
+// Show success message
+function showSuccess(message) {
+    clearErrors();
+    
+    const successDiv = document.createElement('div');
+    successDiv.className = 'success-message bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4';
+    successDiv.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    const form = document.getElementById('loginForm');
+    if (form) {
+        form.insertBefore(successDiv, form.firstChild);
+    }
+}
+
+// Clear existing error/success messages
+function clearErrors() {
+    const existingMessages = document.querySelectorAll('.error-message, .success-message');
+    existingMessages.forEach(message => message.remove());
+}
+
+// Optional: Add some visual feedback for form fields
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('input[type="email"], input[type="password"]');
+    
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.classList.add('ring-2', 'ring-blue-300');
+        });
+        
+        input.addEventListener('blur', function() {
+            this.classList.remove('ring-2', 'ring-blue-300');
+        });
+        
+        // Clear errors when user starts typing
+        input.addEventListener('input', function() {
+            clearErrors();
+        });
+    });
+});
     </script>
 </x-app-layout>

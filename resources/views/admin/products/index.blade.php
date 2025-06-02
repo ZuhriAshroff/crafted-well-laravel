@@ -321,63 +321,71 @@
 
         // Auth utilities
         const auth = {
-            init() {
-                // Check if user is authenticated
-                const userEmail = '{{ auth()->user()->email }}';
-                if (userEmail) {
-                    document.getElementById('userEmail').textContent = userEmail;
-                }
-            },
+    init() {
+        const userEmail = '{{ auth()->user()->email }}';
+        if (userEmail) {
+            document.getElementById('userEmail').textContent = userEmail;
+        }
+    },
 
-            logout() {
-                document.body.innerHTML = `
-                <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                    <div class="text-center">
-                        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-500 mx-auto mb-4"></div>
-                        <p class="text-gray-600">Logging out...</p>
-                    </div>
+    logout() {
+        document.body.innerHTML = `
+            <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+                <div class="text-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-500 mx-auto mb-4"></div>
+                    <p class="text-gray-600">Logging out...</p>
                 </div>
-            `;
+            </div>
+        `;
 
-                fetch('{{ route("admin.logout") }}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json'
-                    }
-                }).then(() => {
-                    window.location.href = '{{ route("admin.login") }}';
-                }).catch(() => {
-                    window.location.href = '{{ route("admin.login") }}';
-                });
+        // Use relative URL
+        fetch('/admin/logout', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
             }
-        };
+        }).then(() => {
+            window.location.href = '/admin/login';
+        }).catch(() => {
+            window.location.href = '/admin/login';
+        });
+    }
+};
 
         // Products management
-        const products = {
-            async load() {
-                ui.showLoading(true);
-                try {
-                    const response = await fetch('{{ route("admin.products.data") }}', {
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken,
-                            'Accept': 'application/json'
-                        }
-                    });
-                    const data = await response.json();
-
-                    if (data.status === 'success') {
-                        this.display(data.data);
-                    } else {
-                        throw new Error(data.message || 'Failed to load products');
-                    }
-                } catch (error) {
-                    console.error('Error loading products:', error);
-                    notifications.showError(error.message || 'Error loading products');
-                } finally {
-                    ui.showLoading(false);
+        
+const products = {
+    async load() {
+        ui.showLoading(true);
+        try {
+            // Use relative URL instead of Laravel route helper
+            const response = await fetch('/admin/products/data', {
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
                 }
-            },
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                this.display(data.data);
+            } else {
+                throw new Error(data.message || 'Failed to load products');
+            }
+        } catch (error) {
+            console.error('Error loading products:', error);
+            notifications.showError(error.message || 'Error loading products');
+        } finally {
+            ui.showLoading(false);
+        }
+    },
+
 
             display(products) {
                 const tbody = document.getElementById('productsTableBody');
@@ -451,50 +459,52 @@
             },
 
             async loadFormulations() {
-                try {
-                    const response = await fetch('{{ route("admin.products.options") }}', {
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken,
-                            'Accept': 'application/json'
-                        }
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    console.log('Formulations response:', data); // Debug log
-
-                    if (data.status === 'success') {
-                        const select = document.getElementById('base_formulation_id');
-                        select.innerHTML = '<option value="">Select Base Formulation</option>';
-                        
-                        if (data.data.base_formulations && data.data.base_formulations.length > 0) {
-                            data.data.base_formulations.forEach(formulation => {
-                                const option = document.createElement('option');
-                                option.value = formulation.base_formulation_id;
-                                option.textContent = formulation.base_name;
-                                if (formulation.description) {
-                                    option.title = formulation.description; // Show description on hover
-                                }
-                                select.appendChild(option);
-                            });
-                            console.log(`Loaded ${data.data.base_formulations.length} formulations`);
-                        } else {
-                            console.warn('No base formulations found');
-                            select.innerHTML = '<option value="">No base formulations available</option>';
-                        }
-                    } else {
-                        throw new Error(data.message || 'Failed to load formulations');
-                    }
-                } catch (error) {
-                    console.error('Error loading formulations:', error);
-                    const select = document.getElementById('base_formulation_id');
-                    select.innerHTML = '<option value="">Error loading formulations</option>';
-                    notifications.showError('Failed to load base formulations: ' + error.message);
+        try {
+            // Use relative URL
+            const response = await fetch('/admin/products/options', {
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
                 }
-            },
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('Formulations response:', data);
+
+            if (data.status === 'success') {
+                const select = document.getElementById('base_formulation_id');
+                select.innerHTML = '<option value="">Select Base Formulation</option>';
+                
+                if (data.data.base_formulations && data.data.base_formulations.length > 0) {
+                    data.data.base_formulations.forEach(formulation => {
+                        const option = document.createElement('option');
+                        option.value = formulation.base_formulation_id;
+                        option.textContent = formulation.base_name;
+                        if (formulation.description) {
+                            option.title = formulation.description;
+                        }
+                        select.appendChild(option);
+                    });
+                    console.log(`Loaded ${data.data.base_formulations.length} formulations`);
+                } else {
+                    console.warn('No base formulations found');
+                    select.innerHTML = '<option value="">No base formulations available</option>';
+                }
+            } else {
+                throw new Error(data.message || 'Failed to load formulations');
+            }
+        } catch (error) {
+            console.error('Error loading formulations:', error);
+            const select = document.getElementById('base_formulation_id');
+            select.innerHTML = '<option value="">Error loading formulations</option>';
+            notifications.showError('Failed to load base formulations: ' + error.message);
+        }
+    },
+
 
             showAddModal() {
                 document.getElementById('modalTitle').textContent = 'Add Product';
@@ -546,35 +556,39 @@
             },
 
             async delete(id) {
-                if (!id) return;
+        if (!id) return;
 
-                ui.showLoading(true);
-                try {
-                    const response = await fetch(`{{ url('admin/products') }}/${id}/delete`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken,
-                            'Accept': 'application/json'
-                        }
-                    });
-
-                    const data = await response.json();
-                    if (data.status === 'success') {
-                        this.hideDeleteModal();
-                        notifications.showSuccess(data.message);
-                        this.load();
-                    } else {
-                        throw new Error(data.message || 'Failed to delete product');
-                    }
-                } catch (error) {
-                    console.error('Error deleting product:', error);
-                    notifications.showError(error.message || 'Failed to delete product');
-                } finally {
-                    ui.showLoading(false);
+        ui.showLoading(true);
+        try {
+            // Use relative URL
+            const response = await fetch(`/admin/products/${id}/delete`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
                 }
-            }
-        };
+            });
 
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                this.hideDeleteModal();
+                notifications.showSuccess(data.message);
+                this.load();
+            } else {
+                throw new Error(data.message || 'Failed to delete product');
+            }
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            notifications.showError(error.message || 'Failed to delete product');
+        } finally {
+            ui.showLoading(false);
+        }
+    }
+};
         // UI utilities
         const ui = {
             addLoadingState(button) {
@@ -617,54 +631,58 @@
 
             // Form submission handler
             document.getElementById('productForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const submitButton = e.target.querySelector('button[type="submit"]');
-                const originalContent = ui.addLoadingState(submitButton);
+    e.preventDefault();
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    const originalContent = ui.addLoadingState(submitButton);
 
-                try {
-                    const productId = document.getElementById('productId').value;
-                    const formData = {
-                        product_name: document.getElementById('product_name').value.trim(),
-                        base_category: document.getElementById('base_category').value.trim(),
-                        product_type: document.getElementById('product_type').value.trim(),
-                        standard_price: Number(document.getElementById('standard_price').value),
-                        customization_price_modifier: Number(document.getElementById('customization_price_modifier').value),
-                        base_formulation_id: document.getElementById('base_formulation_id').value,
-                        image_url: document.getElementById('image_url').value.trim(),
-                        description: document.getElementById('description').value.trim()
-                    };
+    try {
+        const productId = document.getElementById('productId').value;
+        const formData = {
+            product_name: document.getElementById('product_name').value.trim(),
+            base_category: document.getElementById('base_category').value.trim(),
+            product_type: document.getElementById('product_type').value.trim(),
+            standard_price: Number(document.getElementById('standard_price').value),
+            customization_price_modifier: Number(document.getElementById('customization_price_modifier').value),
+            base_formulation_id: document.getElementById('base_formulation_id').value,
+            image_url: document.getElementById('image_url').value.trim(),
+            description: document.getElementById('description').value.trim()
+        };
 
-                    if (!formData.product_name || !formData.base_category || !formData.product_type || !formData.base_formulation_id) {
-                        throw new Error('Please fill in all required fields');
-                    }
+        if (!formData.product_name || !formData.base_category || !formData.product_type || !formData.base_formulation_id) {
+            throw new Error('Please fill in all required fields');
+        }
 
-                    const url = productId ? `{{ url('admin/products') }}/${productId}/update` : '{{ route("admin.products.store") }}';
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken,
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify(formData)
-                    });
+        // Use relative URLs
+        const url = productId ? `/admin/products/${productId}/update` : '/admin/products/create';
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
 
-                    const data = await response.json();
-                    if (data.status === 'success') {
-                        products.hideModal();
-                        notifications.showSuccess(data.message);
-                        products.load();
-                    } else {
-                        throw new Error(data.message || 'Operation failed');
-                    }
-                } catch (error) {
-                    console.error('Error saving product:', error);
-                    notifications.showError(error.message || 'Failed to save product');
-                } finally {
-                    ui.removeLoadingState(submitButton, originalContent);
-                }
-            });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
+        const data = await response.json();
+        if (data.status === 'success') {
+            products.hideModal();
+            notifications.showSuccess(data.message);
+            products.load();
+        } else {
+            throw new Error(data.message || 'Operation failed');
+        }
+    } catch (error) {
+        console.error('Error saving product:', error);
+        notifications.showError(error.message || 'Failed to save product');
+    } finally {
+        ui.removeLoadingState(submitButton, originalContent);
+    }
+});
             // Initial data load
             products.load();
         });
