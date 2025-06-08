@@ -193,9 +193,8 @@
 </div>
 @endsection
 
-// Replace the entire @push('scripts') section with this:
+@push('scripts') 
 
-@push('scripts')
 <script>
     // Helper function to get CSRF token safely
     function getCSRFToken() {
