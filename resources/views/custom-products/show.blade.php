@@ -98,15 +98,15 @@
                     <div class="flex justify-between items-start mb-4">
                         <h1 class="text-3xl font-bold">{{ $productDetails['name'] }}</h1>
                         <!-- <div class="flex space-x-2">
-                                                                                            <a href="{{ route('custom-products.reformulate', $customProduct->custom_product_id) }}" 
-                                                                                               class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm hover:bg-blue-200 transition-colors">
-                                                                                                <i class="fas fa-edit mr-1"></i> Reformulate
-                                                                                            </a>
-                                                                                            <a href="{{ route('custom-products.edit', $customProduct->custom_product_id) }}" 
-                                                                                               class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm hover:bg-gray-200 transition-colors">
-                                                                                                <i class="fas fa-cog mr-1"></i> Edit
-                                                                                            </a>
-                                                                                        </div> -->
+                                                                                                                                                    <a href="{{ route('custom-products.reformulate', $customProduct->custom_product_id) }}" 
+                                                                                                                                                       class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm hover:bg-blue-200 transition-colors">
+                                                                                                                                                        <i class="fas fa-edit mr-1"></i> Reformulate
+                                                                                                                                                    </a>
+                                                                                                                                                    <a href="{{ route('custom-products.edit', $customProduct->custom_product_id) }}" 
+                                                                                                                                                       class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm hover:bg-gray-200 transition-colors">
+                                                                                                                                                        <i class="fas fa-cog mr-1"></i> Edit
+                                                                                                                                                    </a>
+                                                                                                                                                </div> -->
                     </div>
 
                     <!-- Price -->
@@ -296,11 +296,11 @@
             const successDiv = document.createElement('div');
             successDiv.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
             successDiv.innerHTML = `
-                            ${message}
-                            <button class="absolute top-0 bottom-0 right-0 px-4 py-3" onclick="this.parentElement.remove()">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        `;
+                                                                                    ${message}
+                                                                                    <button class="absolute top-0 bottom-0 right-0 px-4 py-3" onclick="this.parentElement.remove()">
+                                                                                        <i class="fas fa-times"></i>
+                                                                                    </button>
+                                                                                `;
             document.body.appendChild(successDiv);
             setTimeout(() => successDiv.remove(), 5000);
         }
@@ -314,57 +314,61 @@
         }
 
         // Cart functionality - MAIN FUNCTION
-        function addToCart(customProductId, quantityOverride = null) {
-            // Get quantity from input field if not provided
-            const quantityInput = document.getElementById('quantityInput');
-            const quantity = quantityOverride || (quantityInput ? parseInt(quantityInput.value) : 1);
+        async function addToCart(customProductId, quantityOverride = null) {
+            try {
+                // Get quantity from input field if not provided
+                const quantityInput = document.getElementById('quantityInput');
+                const quantity = quantityOverride || (quantityInput ? parseInt(quantityInput.value) : 1);
 
-            console.log('Adding to cart with ID:', customProductId, 'Quantity:', quantity);
+                console.log('Adding to cart with ID:', customProductId, 'Quantity:', quantity);
 
-            if (!customProductId || customProductId === 'undefined') {
-                console.error('Invalid product ID:', customProductId);
-                showError('Product ID is missing. Please refresh the page and try again.');
-                return Promise.reject('Invalid product ID');
-            }
+                if (!customProductId || customProductId === 'undefined') {
+                    console.error('Invalid product ID:', customProductId);
+                    showError('Product ID is missing. Please refresh the page and try again.');
+                    return Promise.reject('Invalid product ID');
+                }
 
-            const requestData = {
-                custom_product_id: customProductId,
-                quantity: quantity
-            };
+                const requestData = {
+                    custom_product_id: customProductId,
+                    quantity: quantity
+                };
 
-            console.log('Request data being sent:', requestData);
+                console.log('Request data being sent:', requestData);
 
-            return fetch('{{ route("cart.add") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(requestData)
-            })
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Response data:', data);
-                    if (data.success) {
-                        showSuccess(data.message);
-                        if (data.cart_count) {
-                            updateCartCount(data.cart_count);
-                        }
-                        return data;
-                    } else {
-                        showError(data.message || 'Error adding to cart');
-                        throw new Error(data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Fetch error:', error);
-                    showError('Network error occurred');
-                    throw error;
+                const response = await fetch('/cart/add-custom', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
                 });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (data.success) {
+                    showSuccess(data.message);
+                    if (data.cart_count) {
+                        updateCartCount(data.cart_count);
+                    }
+                    return data;
+                } else {
+                    showError(data.message || 'Error adding to cart');
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                showError('Network error occurred');
+                throw error;
+            }
         }
 
         async function buyNow(customProductId) {
