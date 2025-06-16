@@ -13,13 +13,30 @@ use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
-    // ... (keep all your existing methods exactly as they are)
+    // ========================================
+    // EXISTING METHODS (Keep all as they are)
+    // ========================================
 
     /**
-     * Display a listing of products
+     * Display a listing of products (Enhanced for public view)
      */
     public function index(Request $request): View
     {
+        // Get categories for filter dropdown
+        $categories = Product::where('is_active', true)
+            ->distinct()
+            ->pluck('base_category')
+            ->filter()
+            ->sort()
+            ->values()
+            ->toArray();
+
+        // If this is a public view (no admin), show the enhanced products page
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            return view('products.index', compact('categories'));
+        }
+
+        // Admin view - keep existing functionality
         $products = Product::with('baseFormulation')
             ->when($request->category, fn($query) => $query->byCategory($request->category))
             ->when($request->search, function ($query) use ($request) {
@@ -34,6 +51,354 @@ class ProductController extends Controller
             'currentSearch' => $request->search,
         ]);
     }
+
+    // ========================================
+    // NEW PUBLIC API METHODS FOR DIRECT PURCHASE
+    // ========================================
+
+    /**
+     * API endpoint to get products for public display (AJAX)
+     */
+    public function getProducts(Request $request): JsonResponse
+    {
+        try {
+            $query = Product::where('is_active', true)
+                ->where('is_available_for_purchase', true);
+
+            // Apply filters
+            if ($request->filled('category')) {
+                $query->where('base_category', $request->category);
+            }
+
+            if ($request->filled('search')) {
+                $searchTerm = $request->search;
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('product_name', 'LIKE', "%{$searchTerm}%")
+                        ->orWhere('description', 'LIKE', "%{$searchTerm}%")
+                        ->orWhere('base_category', 'LIKE', "%{$searchTerm}%")
+                        ->orWhere('product_type', 'LIKE', "%{$searchTerm}%");
+                });
+            }
+
+            // Add price filters
+            if ($request->filled('min_price')) {
+                $query->where('standard_price', '>=', $request->min_price);
+            }
+            if ($request->filled('max_price')) {
+                $query->where('standard_price', '<=', $request->max_price);
+            }
+
+            // Sort bestsellers first, then by product_id descending
+            $products = $query->orderBy('is_bestseller', 'desc')
+                ->orderBy('product_id', 'desc')
+                ->get()
+                ->map(function ($product) {
+                    return [
+                        'product_id' => $product->product_id,
+                        'product_name' => $product->product_name,
+                        'description' => $product->description ?: "A premium {$product->base_category} crafted with the finest ingredients. Perfect for your skincare routine and fully customizable to your needs.",
+                        'base_category' => $product->base_category,
+                        'product_type' => $product->product_type,
+                        'standard_price' => $product->standard_price,
+                        'customization_price_modifier' => $product->customization_price_modifier,
+                        'image_url' => $product->image_url,
+                        'is_bestseller' => (bool) $product->is_bestseller,
+                        'is_available_for_purchase' => (bool) $product->is_available_for_purchase,
+                        'discount_percentage' => 15, // You can make this dynamic later
+                        'stock_status' => 'in_stock',
+                        'rating' => 4.5,
+                        'review_count' => rand(10, 50),
+                    ];
+                });
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $products,
+                'total' => $products->count()
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error fetching products: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to load products',
+                'data' => [],
+                'debug' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    /**
+     * Add product directly to cart (for ready-made products)
+     */
+    public function addToCart(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'product_id' => 'required|exists:products,product_id',
+                'quantity' => 'required|integer|min:1|max:10'
+            ]);
+
+            $product = Product::where('product_id', $request->product_id)
+                ->where('is_active', true)
+                ->firstOrFail();
+
+            // Get current ready products cart from session
+            $cart = session()->get('ready_products_cart', []);
+            $productId = $request->product_id;
+
+            // Calculate price (apply any discounts)
+            $basePrice = $product->standard_price;
+            $discountPercentage = $product->discount_percentage ?? 15;
+            $finalPrice = $basePrice * (1 - ($discountPercentage / 100));
+
+            if (isset($cart[$productId])) {
+                // Update quantity if product already in cart
+                $cart[$productId]['quantity'] += $request->quantity;
+            } else {
+                // Add new product to cart
+                $cart[$productId] = [
+                    'product_id' => $product->product_id,
+                    'name' => $product->product_name,
+                    'category' => $product->base_category,
+                    'original_price' => $basePrice,
+                    'price' => $finalPrice,
+                    'quantity' => $request->quantity,
+                    'image' => $product->image_url ?: asset('images/products/default-product.png'),
+                    'type' => 'ready_product'
+                ];
+            }
+
+            session()->put('ready_products_cart', $cart);
+
+            // Calculate total cart count (including custom products)
+            $customCart = session()->get('cart', []);
+            $readyCart = session()->get('ready_products_cart', []);
+
+            $totalCartCount = array_sum(array_column($customCart, 'quantity')) +
+                array_sum(array_column($readyCart, 'quantity'));
+
+            \Log::info('Ready product added to cart:', [
+                'product_id' => $productId,
+                'quantity' => $request->quantity,
+                'cart_count' => $totalCartCount
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Product added to cart successfully!',
+                'cart_count' => $totalCartCount,
+                'product_added' => [
+                    'id' => $product->product_id,
+                    'name' => $product->product_name,
+                    'quantity' => $request->quantity,
+                    'price' => $finalPrice
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error adding ready product to cart: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add product to cart'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get product recommendations based on user preferences
+     */
+    public function getRecommendations(Request $request): JsonResponse
+    {
+        try {
+            $skinType = $request->input('skin_type');
+            $skinConcerns = $request->input('skin_concerns', []);
+            $category = $request->input('category');
+
+            $query = Product::where('is_active', true)
+                ->where('is_available_for_purchase', true);
+
+            // Filter by category if specified
+            if ($category) {
+                $query->where('base_category', $category);
+            }
+
+            // Prioritize bestsellers in recommendations
+            $recommendations = $query->orderBy('is_bestseller', 'desc')
+                ->orderBy('product_id', 'desc')
+                ->limit(6)
+                ->get()
+                ->map(function ($product) {
+                    return [
+                        'product_id' => $product->product_id,
+                        'product_name' => $product->product_name,
+                        'description' => $product->description,
+                        'base_category' => $product->base_category,
+                        'standard_price' => $product->standard_price,
+                        'image_url' => $product->image_url,
+                        'is_bestseller' => (bool) $product->is_bestseller,
+                        'discount_percentage' => 15
+                    ];
+                });
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $recommendations,
+                'message' => 'Recommendations based on your preferences'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting recommendations: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get recommendations'
+            ], 500);
+        }
+    }
+    /**
+     * Enhanced product search with better filtering
+     */
+    public function searchProducts(Request $request): JsonResponse
+    {
+        try {
+            $searchTerm = $request->input('q', '');
+            $category = $request->input('category');
+            $minPrice = $request->input('min_price');
+            $maxPrice = $request->input('max_price');
+            $sortBy = $request->input('sort_by', 'popularity');
+
+            $query = Product::where('is_active', true)
+                ->where('is_available_for_purchase', true);
+
+            // Search functionality
+            if ($searchTerm) {
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('product_name', 'LIKE', "%{$searchTerm}%")
+                        ->orWhere('description', 'LIKE', "%{$searchTerm}%")
+                        ->orWhere('base_category', 'LIKE', "%{$searchTerm}%")
+                        ->orWhere('product_type', 'LIKE', "%{$searchTerm}%");
+                });
+            }
+
+            // Category filter
+            if ($category) {
+                $query->where('base_category', $category);
+            }
+
+            // Price filters
+            if ($minPrice) {
+                $query->where('standard_price', '>=', $minPrice);
+            }
+            if ($maxPrice) {
+                $query->where('standard_price', '<=', $maxPrice);
+            }
+
+            // Sorting
+            switch ($sortBy) {
+                case 'price_low':
+                    $query->orderBy('standard_price', 'asc');
+                    break;
+                case 'price_high':
+                    $query->orderBy('standard_price', 'desc');
+                    break;
+                case 'newest':
+                    $query->orderBy('product_id', 'desc');
+                    break;
+                case 'popularity':
+                default:
+                    $query->orderBy('is_bestseller', 'desc')
+                        ->orderBy('product_id', 'desc');
+                    break;
+            }
+
+            $products = $query->get()->map(function ($product) {
+                return [
+                    'product_id' => $product->product_id,
+                    'product_name' => $product->product_name,
+                    'description' => $product->description,
+                    'base_category' => $product->base_category,
+                    'product_type' => $product->product_type,
+                    'standard_price' => $product->standard_price,
+                    'image_url' => $product->image_url,
+                    'is_bestseller' => (bool) $product->is_bestseller,
+                    'discount_percentage' => 15
+                ];
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $products,
+                'total' => $products->count(),
+                'search_term' => $searchTerm,
+                'filters_applied' => [
+                    'category' => $category,
+                    'min_price' => $minPrice,
+                    'max_price' => $maxPrice,
+                    'sort_by' => $sortBy
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error searching products: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Search failed'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get featured/bestseller products for homepage
+     */
+    public function getFeaturedProducts(): JsonResponse
+    {
+        try {
+            // Get bestsellers first, then other available products
+            $featured = Product::where('is_active', true)
+                ->where('is_available_for_purchase', true)
+                ->orderBy('is_bestseller', 'desc')
+                ->orderBy('product_id', 'desc')
+                ->limit(8)
+                ->get()
+                ->map(function ($product) {
+                    return [
+                        'product_id' => $product->product_id,
+                        'product_name' => $product->product_name,
+                        'description' => $product->description,
+                        'base_category' => $product->base_category,
+                        'standard_price' => $product->standard_price,
+                        'image_url' => $product->image_url,
+                        'is_bestseller' => (bool) $product->is_bestseller,
+                        'discount_percentage' => 15
+                    ];
+                });
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $featured
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting featured products: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get featured products'
+            ], 500);
+        }
+    }
+
+
+    // ========================================
+    // KEEP ALL YOUR EXISTING METHODS BELOW
+    // ========================================
 
     /**
      * Show the form for creating a new product (Admin only)
@@ -109,13 +474,13 @@ class ProductController extends Controller
 
         // Handle regular form requests
         $request->validate(Product::validationRules());
-        
+
         try {
             $product = Product::create($request->validated());
-            
+
             return redirect()->route('products.show', $product)
                 ->with('success', 'Product created successfully!');
-                
+
         } catch (\Exception $e) {
             return back()
                 ->withInput()
@@ -130,7 +495,7 @@ class ProductController extends Controller
     {
         $product = Product::with(['baseFormulation', 'customProducts'])
             ->findOrFail($productId);
-            
+
         $relatedProducts = $product->getFrequentlyBoughtTogether();
 
         return view('products.show', [
@@ -219,13 +584,13 @@ class ProductController extends Controller
 
         // Handle regular form requests
         $request->validate(Product::validationRules(true));
-        
+
         try {
             $product->update($request->validated());
-            
+
             return redirect()->route('products.show', $product)
                 ->with('success', 'Product updated successfully!');
-                
+
         } catch (\Exception $e) {
             return back()
                 ->withInput()
@@ -240,14 +605,14 @@ class ProductController extends Controller
     {
         try {
             $product = Product::findOrFail($productId);
-            
+
             // Check if product is used in any orders or custom products
             $isUsed = DB::table('order_items')
                 ->where('product_id', $productId)
                 ->exists() ||
                 DB::table('custom_products')
-                ->where('base_product_id', $productId)
-                ->exists();
+                    ->where('base_product_id', $productId)
+                    ->exists();
 
             $message = '';
             if ($isUsed) {
@@ -271,7 +636,7 @@ class ProductController extends Controller
             // Handle regular form requests
             return redirect()->route('products.index')
                 ->with('success', $message);
-                
+
         } catch (\Exception $e) {
             \Log::error('Error deleting product: ' . $e->getMessage());
 
@@ -294,14 +659,14 @@ class ProductController extends Controller
     {
         $user = auth()->user();
         $userProfile = \App\Models\UserProfile::getLatestForUser($user->user_id);
-        
+
         if (!$userProfile) {
             return redirect()->route('profile.create')
                 ->with('info', 'Please create a profile first to get recommendations.');
         }
 
         $recommendations = Product::getRecommendationsForProfile($userProfile);
-        
+
         return view('products.recommendations', [
             'recommendations' => $recommendations,
             'profile' => $userProfile,
@@ -325,7 +690,7 @@ class ProductController extends Controller
         }
 
         $products = Product::search($query, $category, $priceRange);
-        
+
         return view('products.search', [
             'products' => $products,
             'query' => $query,
@@ -336,7 +701,7 @@ class ProductController extends Controller
     }
 
     // ========================================
-    // ADMIN-SPECIFIC METHODS
+    // ADMIN-SPECIFIC METHODS (Keep all existing)
     // ========================================
 
     /**
@@ -357,10 +722,10 @@ class ProductController extends Controller
 
             // Apply filters
             if ($request->search) {
-                $query->where(function($q) use ($request) {
+                $query->where(function ($q) use ($request) {
                     $q->where('product_name', 'like', "%{$request->search}%")
-                      ->orWhere('base_category', 'like', "%{$request->search}%")
-                      ->orWhere('product_type', 'like', "%{$request->search}%");
+                        ->orWhere('base_category', 'like', "%{$request->search}%")
+                        ->orWhere('product_type', 'like', "%{$request->search}%");
                 });
             }
 
@@ -375,7 +740,7 @@ class ProductController extends Controller
             // Sorting
             $sortField = $request->get('sort', 'product_id');
             $sortDirection = $request->get('direction', 'desc');
-            
+
             $allowedSorts = ['product_id', 'product_name', 'base_category', 'product_type', 'standard_price', 'created_at'];
             if (in_array($sortField, $allowedSorts)) {
                 $query->orderBy($sortField, $sortDirection);
@@ -406,7 +771,7 @@ class ProductController extends Controller
         try {
             $categories = Product::distinct()->pluck('base_category')->filter()->sort()->values();
             $types = Product::distinct()->pluck('product_type')->filter()->sort()->values();
-            
+
             // Get base formulations with explicit column selection to avoid duplicates
             $baseFormulations = DB::table('base_formulations')
                 ->select(
@@ -417,7 +782,7 @@ class ProductController extends Controller
                 ->where('is_active', 1)
                 ->orderBy('base_name')
                 ->get()
-                ->map(function($formulation) {
+                ->map(function ($formulation) {
                     return [
                         'base_formulation_id' => $formulation->id,
                         'base_name' => $formulation->base_name,
@@ -430,12 +795,12 @@ class ProductController extends Controller
                 $baseFormulations = DB::table('base_formulations')
                     ->select(
                         DB::raw('base_formulation_id as id'),
-                        'base_name', 
+                        'base_name',
                         'description'
                     )
                     ->orderBy('base_name')
                     ->get()
-                    ->map(function($formulation) {
+                    ->map(function ($formulation) {
                         return [
                             'base_formulation_id' => $formulation->id,
                             'base_name' => $formulation->base_name,
@@ -470,7 +835,7 @@ class ProductController extends Controller
     {
         try {
             $period = $request->get('period', '30days');
-            $days = match($period) {
+            $days = match ($period) {
                 '7days' => 7,
                 '30days' => 30,
                 '90days' => 90,
@@ -539,4 +904,19 @@ class ProductController extends Controller
 
         return $distribution;
     }
+
+
+    /**
+     * Get featured/bestseller products for homepage
+     */
+
+
+    /**
+     * Enhanced product search with better filtering
+     */
+
+    /**
+     * Get product recommendations based on user preferences
+     */
+
 }

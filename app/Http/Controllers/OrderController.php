@@ -14,7 +14,7 @@ class OrderController extends Controller
      */
     public function __construct()
     {
-
+        $this->middleware('auth');
     }
 
     /**
@@ -23,8 +23,8 @@ class OrderController extends Controller
     public function index(Request $request): View
     {
         $user = auth()->user();
-        
-        $orders = Order::forUser($user->user_id)
+
+        $orders = Order::forUser($user->id)
             ->with(['orderItems.product', 'orderItems.customProduct'])
             ->orderBy('order_date', 'desc')
             ->paginate(10);
@@ -40,8 +40,8 @@ class OrderController extends Controller
     public function show($orderId): View
     {
         $user = auth()->user();
-        
-        $order = Order::forUser($user->user_id)
+
+        $order = Order::forUser($user->id)
             ->with(['orderItems.product', 'orderItems.customProduct'])
             ->findOrFail($orderId);
 
@@ -57,8 +57,8 @@ class OrderController extends Controller
     public function tracking($orderId): View
     {
         $user = auth()->user();
-        
-        $order = Order::forUser($user->user_id)->findOrFail($orderId);
+
+        $order = Order::forUser($user->id)->findOrFail($orderId);
 
         $trackingSteps = [
             'processing' => [
@@ -97,8 +97,8 @@ class OrderController extends Controller
     {
         try {
             $user = auth()->user();
-            
-            $order = Order::forUser($user->user_id)->findOrFail($orderId);
+
+            $order = Order::forUser($user->id)->findOrFail($orderId);
 
             if (!$order->canBeCancelled()) {
                 return back()->with('error', 'Order cannot be cancelled in its current status.');
@@ -123,7 +123,7 @@ class OrderController extends Controller
      */
     public function adminIndex(Request $request): View
     {
-        $query = Order::with(['user:user_id,first_name,last_name,email', 'orderItems']);
+        $query = Order::with(['user:id,first_name,last_name,email', 'orderItems']);
 
         // Apply filters
         if ($request->status) {
@@ -137,8 +137,8 @@ class OrderController extends Controller
         if ($request->search) {
             $query->whereHas('user', function ($q) use ($request) {
                 $q->where('email', 'like', "%{$request->search}%")
-                  ->orWhere('first_name', 'like', "%{$request->search}%")
-                  ->orWhere('last_name', 'like', "%{$request->search}%");
+                    ->orWhere('first_name', 'like', "%{$request->search}%")
+                    ->orWhere('last_name', 'like', "%{$request->search}%");
             });
         }
 
@@ -186,7 +186,7 @@ class OrderController extends Controller
 
         try {
             $order = Order::findOrFail($orderId);
-            
+
             $updateData = $request->only(['payment_status', 'shipping_status', 'delivery_method']);
             $order->updateOrder($updateData);
 

@@ -57,6 +57,18 @@ Route::get('/privacy', function () {
     return view('pages.privacy');
 })->name('privacy');
 
+// ========================================
+// PUBLIC WEB API ROUTES FOR AJAX CALLS
+// ========================================
+
+Route::prefix('api')->middleware('web')->group(function () {
+    // Public product API routes (no auth required) - for your products page AJAX calls
+    Route::get('/products', [ProductController::class, 'getProducts']);
+    Route::get('/products/featured', [ProductController::class, 'getFeaturedProducts'])->name('api.products.featured');
+    Route::get('/products/search', [ProductController::class, 'searchProducts'])->name('api.products.search');
+    Route::get('/products/recommendations', [ProductController::class, 'getRecommendations'])->name('api.products.recommendations');
+});
+
 // Custom product routes for authenticated users
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/custom-products/{id}', [CustomProductController::class, 'show'])->name('custom-products.show');
@@ -67,26 +79,26 @@ Route::middleware('auth:sanctum')->group(function () {
 // ========================================
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    
+
     // ========================================
     // DASHBOARD ROUTES - ROLE BASED ROUTING
     // ========================================
-    
+
     // Main dashboard route - redirects based on role
     Route::get('/dashboard', function () {
         $user = auth()->user();
-        
+
         if ($user->role === 'admin') {
             return redirect()->route('admin.dashboard');
         }
-        
+
         return redirect()->route('user.dashboard');
     })->name('dashboard');
-    
+
     // User Dashboard - separate route for regular users
     Route::get('/user/dashboard', function () {
         $user = auth()->user();
-        
+
         // Get user stats
         $stats = [
             'total_products' => \App\Models\CustomProduct::getUserProductsCount($user->id),
@@ -96,10 +108,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'skin_type' => 'Not Set', // You can get this from user profile if exists
             'total_orders' => 0, // Add order count when you have orders working
         ];
-        
+
         // Get recent products
         $recentProducts = \App\Models\CustomProduct::getRecentForUser($user->id, 5);
-        
+
         return view('user.dashboard', compact('stats', 'recentProducts'));
     })->name('user.dashboard');
 
@@ -151,20 +163,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // ========================================
-    // CART & CHECKOUT ROUTES (uncomment as needed)
+    // CART & CHECKOUT ROUTES (UPDATED)
     // ========================================
-    
+
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-    Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+
+    // Specific endpoints for different product types
+    Route::post('/cart/add-custom', [CartController::class, 'addCustomProduct'])->name('cart.add-custom');
+    Route::post('/cart/add-ready', [CartController::class, 'addReadyProduct'])->name('cart.add-ready');
+
+    // Generic cart operations (works for both types)
     Route::put('/cart/update/{id}', [CartController::class, 'update'])->name('cart.update');
     Route::delete('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
     Route::delete('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
-    
+    Route::get('/cart/summary', [CartController::class, 'summary'])->name('cart.summary');
+
+    // Backward compatibility routes
+    Route::post('/cart/add', [CartController::class, 'addCustomProduct'])->name('cart.add');
+
     // Checkout routes
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
     Route::get('/checkout/success', [CheckoutController::class, 'success'])->name('checkout.success');
-    
 
     // ========================================
     // WISHLIST & ACCOUNT ROUTES (uncomment as needed)
@@ -190,7 +210,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // ========================================
 
 Route::prefix('admin')->name('admin.')->group(function () {
-    
+
     // Admin login routes (no middleware required)
     Route::get('/login', [AdminController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AdminController::class, 'login']);
@@ -199,7 +219,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     // Protected admin routes
     Route::middleware([\App\Http\Middleware\AdminMiddleware::class])->group(function () {
-        
+
         // ========================================
         // ADMIN DASHBOARD & ANALYTICS
         // ========================================
@@ -237,7 +257,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{customProduct}', [CustomProductController::class, 'adminShow'])->name('show');
             Route::get('/analytics/overview', [CustomProductController::class, 'analytics'])->name('analytics');
             Route::get('/export/data', [CustomProductController::class, 'exportData'])->name('export');
-            
+
             // Additional admin custom product routes
             Route::put('/{customProduct}/status', [CustomProductController::class, 'updateStatus'])->name('update-status');
             Route::post('/{customProduct}/notes', [CustomProductController::class, 'addAdminNotes'])->name('add-notes');

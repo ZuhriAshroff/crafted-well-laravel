@@ -20,13 +20,15 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center space-x-4">
                     @if(file_exists(public_path('app/views/assets/Crafted Well Logo (2).png')))
-                        <img src="{{ asset('app/views/assets/Crafted Well Logo (2).png') }}" alt="Logo" class="h-6 w-auto object-contain">
+                        <img src="{{ asset('app/views/assets/Crafted Well Logo (2).png') }}" alt="Logo"
+                            class="h-6 w-auto object-contain">
                     @else
                         <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                             <i class="fas fa-flask text-white"></i>
                         </div>
                     @endif
-                    <h1 class="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    <h1
+                        class="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                         Admin Dashboard</h1>
                 </div>
                 <div class="flex items-center space-x-6">
@@ -147,9 +149,9 @@
                     <div id="imagePreviewSection" class="hidden">
                         <label class="block text-gray-700 text-sm font-medium mb-2">Image Preview</label>
                         <div class="flex items-center space-x-4">
-                            <img id="imagePreview" src="" alt="Product preview" 
+                            <img id="imagePreview" src="" alt="Product preview"
                                 class="h-20 w-20 rounded-lg object-cover shadow-sm border border-gray-200">
-                            <button type="button" onclick="removeImagePreview()" 
+                            <button type="button" onclick="removeImagePreview()"
                                 class="text-red-500 hover:text-red-700 text-sm">
                                 Remove Image
                             </button>
@@ -192,7 +194,8 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label class="block text-gray-700 text-sm font-medium mb-2" for="customization_price_modifier">
+                            <label class="block text-gray-700 text-sm font-medium mb-2"
+                                for="customization_price_modifier">
                                 Customization Price Modifier *
                             </label>
                             <input type="number" id="customization_price_modifier" required min="0" step="0.01"
@@ -268,458 +271,235 @@
         </div>
     </div>
 
-    <script>
-        // Get CSRF token
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        // Notifications System
-        const notifications = {
-            showToast(message, type = 'success') {
-                const toast = document.createElement('div');
-                toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-y-full z-50`;
+    @push('scripts')
+        <script>
+            // Product data from Laravel
+            const productData = @json($productDetails);
 
-                if (type === 'success') {
-                    toast.classList.add('bg-green-500', 'text-white');
-                } else if (type === 'error') {
-                    toast.classList.add('bg-red-500', 'text-white');
-                }
+            // ========================================
+            // NOTIFICATION FUNCTIONS
+            // ========================================
 
-                toast.textContent = message;
-                document.body.appendChild(toast);
-
-                setTimeout(() => toast.classList.remove('translate-y-full'), 100);
-
-                setTimeout(() => {
-                    toast.classList.add('translate-y-full');
-                    setTimeout(() => toast.remove(), 300);
-                }, 3000);
-            },
-
-            showError(message) {
-                const errorAlert = document.getElementById('errorAlert');
-                const errorMessage = document.getElementById('errorMessage');
-                errorMessage.textContent = message;
-                errorAlert.classList.remove('hidden');
-            },
-
-            showSuccess(message) {
-                const successAlert = document.getElementById('successAlert');
-                const successMessage = document.getElementById('successMessage');
-                successMessage.textContent = message;
-                successAlert.classList.remove('hidden');
-            }
-        };
-
-        // Hide alerts
-        function hideError() {
-            document.getElementById('errorAlert').classList.add('hidden');
-        }
-
-        function hideSuccess() {
-            document.getElementById('successAlert').classList.add('hidden');
-        }
-
-        // Auth utilities
-        const auth = {
-    init() {
-        const userEmail = '{{ auth()->user()->email }}';
-        if (userEmail) {
-            document.getElementById('userEmail').textContent = userEmail;
-        }
-    },
-
-    logout() {
-        document.body.innerHTML = `
-            <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                <div class="text-center">
-                    <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-500 mx-auto mb-4"></div>
-                    <p class="text-gray-600">Logging out...</p>
-                </div>
-            </div>
-        `;
-
-        // Use relative URL
-        fetch('/admin/logout', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            }
-        }).then(() => {
-            window.location.href = '/admin/login';
-        }).catch(() => {
-            window.location.href = '/admin/login';
-        });
-    }
-};
-
-        // Products management
-        
-const products = {
-    async load() {
-        ui.showLoading(true);
-        try {
-            // Use relative URL instead of Laravel route helper
-            const response = await fetch('/admin/products/data', {
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json'
-                }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const data = await response.json();
-
-            if (data.status === 'success') {
-                this.display(data.data);
-            } else {
-                throw new Error(data.message || 'Failed to load products');
-            }
-        } catch (error) {
-            console.error('Error loading products:', error);
-            notifications.showError(error.message || 'Error loading products');
-        } finally {
-            ui.showLoading(false);
-        }
-    },
-
-
-            display(products) {
-                const tbody = document.getElementById('productsTableBody');
-
-                if (!products || products.length === 0) {
-                    tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="px-6 py-12 text-center">
-                            <div class="flex flex-col items-center">
-                                <i class="fas fa-box-open text-gray-300 text-4xl mb-4"></i>
-                                <p class="text-gray-500 text-lg">No products found</p>
-                                <p class="text-gray-400 text-sm mt-1">Add your first product to get started</p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                    return;
-                }
-
-                tbody.innerHTML = products.map(product => `
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            ${product.image_url ? 
-                                `<img src="${ui.escapeHtml(product.image_url)}" alt="${ui.escapeHtml(product.product_name)}" 
-                                     class="h-12 w-12 rounded-lg object-cover shadow-sm border border-gray-200"
-                                     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI0Y5RkFGQiIvPgo8cGF0aCBkPSJNMjQgMzJMMTYgMjBIMzJMMjQgMzJaIiBmaWxsPSIjRTVFN0VCIi8+CjxjaXJjbGUgY3g9IjIwIiBjeT0iMTYiIHI9IjIiIGZpbGw9IiNFNUU3RUIiLz4KPC9zdmc+'; this.classList.add('opacity-50');">` :
-                                `<div class="h-12 w-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                    </svg>
-                                </div>`
-                            }
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">${ui.escapeHtml(product.product_name)}</div>
-                        ${product.description ? 
-                            `<div class="text-xs text-gray-500 mt-1 max-w-xs truncate">${ui.escapeHtml(product.description)}</div>` : 
-                            ''
-                        }
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-3 py-1 text-sm text-blue-600 bg-blue-100 rounded-full">
-                            ${ui.escapeHtml(product.base_category)}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-3 py-1 text-sm text-purple-600 bg-purple-100 rounded-full">
-                            ${ui.escapeHtml(product.product_type)}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">LKR ${parseFloat(product.standard_price).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    })}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                        <button onclick='products.edit(${JSON.stringify(product)})' 
-                            class="text-blue-600 hover:text-blue-900 transition-colors">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="products.showDeleteModal('${ui.escapeHtml(product.product_id)}')" 
-                            class="text-red-600 hover:text-red-900 transition-colors">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-            },
-
-            async loadFormulations() {
-        try {
-            // Use relative URL
-            const response = await fetch('/admin/products/options', {
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json'
-                }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            console.log('Formulations response:', data);
-
-            if (data.status === 'success') {
-                const select = document.getElementById('base_formulation_id');
-                select.innerHTML = '<option value="">Select Base Formulation</option>';
-                
-                if (data.data.base_formulations && data.data.base_formulations.length > 0) {
-                    data.data.base_formulations.forEach(formulation => {
-                        const option = document.createElement('option');
-                        option.value = formulation.base_formulation_id;
-                        option.textContent = formulation.base_name;
-                        if (formulation.description) {
-                            option.title = formulation.description;
-                        }
-                        select.appendChild(option);
-                    });
-                    console.log(`Loaded ${data.data.base_formulations.length} formulations`);
+            function showError(message) {
+                const errorDiv = document.getElementById('errorMessage');
+                if (errorDiv) {
+                    errorDiv.querySelector('span').textContent = message;
+                    errorDiv.classList.remove('hidden');
+                    setTimeout(() => {
+                        errorDiv.classList.add('hidden');
+                    }, 5000);
                 } else {
-                    console.warn('No base formulations found');
-                    select.innerHTML = '<option value="">No base formulations available</option>';
+                    alert('Error: ' + message);
                 }
-            } else {
-                throw new Error(data.message || 'Failed to load formulations');
             }
-        } catch (error) {
-            console.error('Error loading formulations:', error);
-            const select = document.getElementById('base_formulation_id');
-            select.innerHTML = '<option value="">Error loading formulations</option>';
-            notifications.showError('Failed to load base formulations: ' + error.message);
-        }
-    },
 
+            function showSuccess(message) {
+                const successDiv = document.createElement('div');
+                successDiv.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
+                successDiv.innerHTML = `
+                ${message}
+                <button class="absolute top-0 bottom-0 right-0 px-4 py-3" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+                document.body.appendChild(successDiv);
+                setTimeout(() => successDiv.remove(), 5000);
+            }
 
-            showAddModal() {
-                document.getElementById('modalTitle').textContent = 'Add Product';
-                document.getElementById('productId').value = '';
-                document.getElementById('productForm').reset();
-                this.loadFormulations();
-                document.getElementById('productModal').classList.remove('hidden');
-                document.getElementById('product_name').focus();
-            },
+            // ========================================
+            // UNIFIED CART FUNCTIONS
+            // ========================================
 
-            edit(product) {
-                try {
-                    document.getElementById('modalTitle').textContent = 'Edit Product';
-                    document.getElementById('productId').value = product.product_id;
-                    document.getElementById('product_name').value = product.product_name;
-                    document.getElementById('base_category').value = product.base_category;
-                    document.getElementById('product_type').value = product.product_type;
-                    document.getElementById('standard_price').value = product.standard_price;
-                    document.getElementById('customization_price_modifier').value = product.customization_price_modifier;
-                    document.getElementById('image_url').value = product.image_url || '';
-                    document.getElementById('description').value = product.description || '';
-                    
-                    this.loadFormulations().then(() => {
-                        document.getElementById('base_formulation_id').value = product.base_formulation_id;
+            function addToCart(customProductId, quantityOverride = null) {
+                // Get quantity from input field if not provided
+                const quantityInput = document.getElementById('quantityInput');
+                const quantity = quantityOverride || (quantityInput ? parseInt(quantityInput.value) : 1);
+
+                console.log('Adding to cart with ID:', customProductId, 'Quantity:', quantity);
+
+                if (!customProductId || customProductId === 'undefined') {
+                    console.error('Invalid product ID:', customProductId);
+                    showError('Product ID is missing. Please refresh the page and try again.');
+                    return Promise.reject('Invalid product ID');
+                }
+
+                const requestData = {
+                    custom_product_id: customProductId,
+                    quantity: quantity
+                };
+
+                console.log('Request data being sent:', requestData);
+
+                return fetch('{{ route("cart.add") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                })
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Response data:', data);
+                        if (data.success) {
+                            showSuccess(data.message);
+
+                            // Update cart count using unified system
+                            if (data.cart_count !== undefined && window.CartManager) {
+                                window.CartManager.updateAllCounters(data.cart_count);
+                            } else if (window.updateCartCounter) {
+                                window.updateCartCounter(data.cart_count || 0);
+                            }
+
+                            return data;
+                        } else {
+                            showError(data.message || 'Error adding to cart');
+                            throw new Error(data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        showError('Network error occurred');
+                        throw error;
                     });
-                    
-                    document.getElementById('productModal').classList.remove('hidden');
-                    document.getElementById('product_name').focus();
+            }
+
+            async function buyNow(customProductId) {
+                try {
+                    console.log('Buy now for product:', customProductId);
+
+                    // First add to cart
+                    await addToCart(customProductId);
+
+                    // Then redirect to checkout
+                    window.location.href = '{{ route("checkout.index") }}';
                 } catch (error) {
-                    console.error('Error editing product:', error);
-                    notifications.showError('Failed to load product details');
+                    console.error('Error proceeding to checkout:', error);
+                    showError('Failed to proceed to checkout. Please try again.');
                 }
-            },
+            }
 
-            hideModal() {
-                document.getElementById('productModal').classList.add('hidden');
-                document.getElementById('productForm').reset();
-                document.getElementById('imagePreviewSection').classList.add('hidden');
-            },
+            // ========================================
+            // PAGE INITIALIZATION
+            // ========================================
 
-            showDeleteModal(productId) {
-                window.deleteProductId = productId;
-                document.getElementById('deleteModal').classList.remove('hidden');
-            },
+            document.addEventListener('DOMContentLoaded', function () {
+                // Quantity controls
+                const quantityInput = document.getElementById('quantityInput');
+                const decrementBtn = document.getElementById('decrementBtn');
+                const incrementBtn = document.getElementById('incrementBtn');
 
-            hideDeleteModal() {
-                document.getElementById('deleteModal').classList.add('hidden');
-                window.deleteProductId = null;
-            },
-
-            async delete(id) {
-        if (!id) return;
-
-        ui.showLoading(true);
-        try {
-            // Use relative URL
-            const response = await fetch(`/admin/products/${id}/delete`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json'
+                if (decrementBtn) {
+                    decrementBtn.addEventListener('click', () => {
+                        const currentValue = parseInt(quantityInput.value);
+                        if (currentValue > 1) {
+                            quantityInput.value = currentValue - 1;
+                        }
+                    });
                 }
+
+                if (incrementBtn) {
+                    incrementBtn.addEventListener('click', () => {
+                        const currentValue = parseInt(quantityInput.value);
+                        if (currentValue < 10) {
+                            quantityInput.value = currentValue + 1;
+                        }
+                    });
+                }
+
+                // Initialize cart counter if CartManager is available
+                if (window.CartManager) {
+                    window.CartManager.init();
+                }
+
+                // Auto-hide flash messages
+                setTimeout(() => {
+                    document.querySelectorAll('[class*="border-green-400"], [class*="border-red-400"]').forEach(el => {
+                        if (el.querySelector('button')) {
+                            el.style.transition = 'opacity 0.5s';
+                            el.style.opacity = '0';
+                            setTimeout(() => el.remove(), 500);
+                        }
+                    });
+                }, 5000);
+
+                // Initialize thumbnail selection
+                updateThumbnailSelection();
+
+                console.log('Product page initialized. Functions available:', {
+                    addToCart: typeof addToCart,
+                    buyNow: typeof buyNow,
+                    CartManager: typeof window.CartManager
+                });
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            // ========================================
+            // IMAGE GALLERY AND ACCORDION FUNCTIONS
+            // ========================================
+
+            function toggleAccordion(sectionId) {
+                const content = document.getElementById(`${sectionId}-content`);
+                const button = content.previousElementSibling;
+                const icon = button.querySelector('i');
+
+                content.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
             }
 
-            const data = await response.json();
-            if (data.status === 'success') {
-                this.hideDeleteModal();
-                notifications.showSuccess(data.message);
-                this.load();
-            } else {
-                throw new Error(data.message || 'Failed to delete product');
+            let currentImageIndex = 0;
+            const images = document.querySelectorAll('.thumbnail');
+            const mainImage = document.getElementById('mainImage');
+
+            function changeImage(direction) {
+                currentImageIndex = (currentImageIndex + direction + images.length) % images.length;
+                mainImage.src = images[currentImageIndex].src;
+                updateThumbnailSelection();
             }
-        } catch (error) {
-            console.error('Error deleting product:', error);
-            notifications.showError(error.message || 'Failed to delete product');
-        } finally {
-            ui.showLoading(false);
-        }
-    }
-};
-        // UI utilities
-        const ui = {
-            addLoadingState(button) {
-                const originalContent = button.innerHTML;
-                button.disabled = true;
-                button.innerHTML = `
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Processing...
-            `;
-                return originalContent;
-            },
 
-            removeLoadingState(button, originalContent) {
-                button.disabled = false;
-                button.innerHTML = originalContent;
-            },
-
-            showLoading(show) {
-                document.getElementById('loadingSpinner').classList.toggle('hidden', !show);
-            },
-
-            escapeHtml(unsafe) {
-                return unsafe
-                    .toString()
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
+            function updateThumbnailSelection() {
+                images.forEach((img, index) => {
+                    if (index === currentImageIndex) {
+                        img.classList.add('border-2', 'border-pink-500');
+                    } else {
+                        img.classList.remove('border-2', 'border-pink-500');
+                    }
+                });
             }
-        };
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function () {
-            // Initialize authentication
-            auth.init();
+            // Add click handlers to thumbnails
+            images.forEach((img, index) => {
+                img.addEventListener('click', () => {
+                    currentImageIndex = index;
+                    mainImage.src = img.src;
+                    updateThumbnailSelection();
+                });
+            });
 
-            // Form submission handler
-            document.getElementById('productForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const submitButton = e.target.querySelector('button[type="submit"]');
-    const originalContent = ui.addLoadingState(submitButton);
-
-    try {
-        const productId = document.getElementById('productId').value;
-        const formData = {
-            product_name: document.getElementById('product_name').value.trim(),
-            base_category: document.getElementById('base_category').value.trim(),
-            product_type: document.getElementById('product_type').value.trim(),
-            standard_price: Number(document.getElementById('standard_price').value),
-            customization_price_modifier: Number(document.getElementById('customization_price_modifier').value),
-            base_formulation_id: document.getElementById('base_formulation_id').value,
-            image_url: document.getElementById('image_url').value.trim(),
-            description: document.getElementById('description').value.trim()
-        };
-
-        if (!formData.product_name || !formData.base_category || !formData.product_type || !formData.base_formulation_id) {
-            throw new Error('Please fill in all required fields');
-        }
-
-        // Use relative URLs
-        const url = productId ? `/admin/products/${productId}/update` : '/admin/products/create';
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (data.status === 'success') {
-            products.hideModal();
-            notifications.showSuccess(data.message);
-            products.load();
-        } else {
-            throw new Error(data.message || 'Operation failed');
-        }
-    } catch (error) {
-        console.error('Error saving product:', error);
-        notifications.showError(error.message || 'Failed to save product');
-    } finally {
-        ui.removeLoadingState(submitButton, originalContent);
-    }
-});
-            // Initial data load
-            products.load();
-        });
-
-        // Make functions available globally
-        window.showAddModal = products.showAddModal.bind(products);
-        window.hideModal = products.hideModal.bind(products);
-        window.editProduct = products.edit.bind(products);
-        window.showDeleteModal = products.showDeleteModal.bind(products);
-        window.hideDeleteModal = products.hideDeleteModal.bind(products);
-        window.confirmDelete = () => products.delete(window.deleteProductId);
-        window.logout = auth.logout.bind(auth);
-        
-        // Image preview functions
-        window.previewImage = function() {
-            const imageUrl = document.getElementById('image_url').value;
-            const previewSection = document.getElementById('imagePreviewSection');
-            const previewImg = document.getElementById('imagePreview');
-            
-            if (imageUrl && imageUrl.trim() !== '') {
-                previewImg.src = imageUrl;
-                previewSection.classList.remove('hidden');
-                
-                // Handle image load errors
-                previewImg.onerror = function() {
-                    previewSection.classList.add('hidden');
-                };
-            } else {
-                previewSection.classList.add('hidden');
+            // Image modal functionality
+            function openImageModal() {
+                const modal = document.getElementById('imageModal');
+                const modalImage = document.getElementById('modalImage');
+                modalImage.src = mainImage.src;
+                modal.classList.remove('hidden');
             }
-        };
-        
-        window.removeImagePreview = function() {
-            document.getElementById('image_url').value = '';
-            document.getElementById('imagePreviewSection').classList.add('hidden');
-        };
-    </script>
+
+            function closeImageModal() {
+                document.getElementById('imageModal').classList.add('hidden');
+            }
+
+            // Close modal when clicking outside
+            document.getElementById('imageModal').addEventListener('click', function (e) {
+                if (e.target === this) {
+                    closeImageModal();
+                }
+            });
+        </script>
+    @endpush
 </body>
 
 </html>

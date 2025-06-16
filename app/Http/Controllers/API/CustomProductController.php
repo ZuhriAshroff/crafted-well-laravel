@@ -17,8 +17,7 @@ class CustomProductController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('auth:sanctum');
-        $this->middleware('active.user');
+
     }
 
     /**
@@ -69,9 +68,9 @@ class CustomProductController extends Controller
     {
         try {
             $user = $request->user();
-    
+
             $validator = Validator::make($request->all(), CustomProduct::validationRules());
-    
+
             if ($validator->fails()) {
                 return response()->json([
                     'status' => 'error',
@@ -79,10 +78,10 @@ class CustomProductController extends Controller
                     'errors' => $validator->errors()
                 ], 422);
             }
-    
+
             $data = $validator->validated();
             $data['user_id'] = $user->id; // ✅ FIXED: Use 'user_id' instead of 'id'
-    
+
             // Verify base product exists
             $baseProduct = Product::find($data['base_product_id']);
             if (!$baseProduct) {
@@ -91,16 +90,16 @@ class CustomProductController extends Controller
                     'message' => 'Base product not found'
                 ], 404);
             }
-    
+
             // Create custom product with intelligent formulation
             $customProduct = CustomProduct::createWithFormulation($data);
-    
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Custom product created successfully',
                 'data' => $customProduct->getFormattedDetails()
             ], 201);
-    
+
         } catch (\Exception $e) {
             \Log::error('Error creating custom product: ' . $e->getMessage());
             return response()->json([
@@ -109,7 +108,7 @@ class CustomProductController extends Controller
             ], 500);
         }
     }
-    
+
 
     /**
      * Display the specified custom product.
@@ -174,7 +173,7 @@ class CustomProductController extends Controller
             // If profile data is being updated, regenerate the entire formulation
             if (isset($data['profile_data'])) {
                 $customProduct->updateWithNewProfile($data['profile_data']);
-                
+
                 // Log profile update
                 $this->logCustomProductAnalytics($user, 'custom_product_reformulated', [
                     'custom_product_id' => $customProduct->custom_product_id,
@@ -410,13 +409,13 @@ class CustomProductController extends Controller
             }
 
             if ($search) {
-                $query->where(function($q) use ($search) {
+                $query->where(function ($q) use ($search) {
                     $q->where('product_name', 'like', "%{$search}%")
-                      ->orWhereHas('user', function($userQuery) use ($search) {
-                          $userQuery->where('email', 'like', "%{$search}%")
-                                   ->orWhere('first_name', 'like', "%{$search}%")
-                                   ->orWhere('last_name', 'like', "%{$search}%");
-                      });
+                        ->orWhereHas('user', function ($userQuery) use ($search) {
+                            $userQuery->where('email', 'like', "%{$search}%")
+                                ->orWhere('first_name', 'like', "%{$search}%")
+                                ->orWhere('last_name', 'like', "%{$search}%");
+                        });
                 });
             }
 
@@ -500,7 +499,7 @@ class CustomProductController extends Controller
     {
         $products = CustomProduct::forUser($userId)->get();
         $concerns = [];
-        
+
         foreach ($products as $product) {
             if (isset($product->profile_data['skin_concerns'])) {
                 foreach ($product->profile_data['skin_concerns'] as $concern) {
@@ -508,7 +507,7 @@ class CustomProductController extends Controller
                 }
             }
         }
-        
+
         arsort($concerns);
         return array_slice($concerns, 0, 3, true);
     }
@@ -522,13 +521,13 @@ class CustomProductController extends Controller
     {
         $products = CustomProduct::forUser($userId)->get();
         $ingredients = [];
-        
+
         foreach ($products as $product) {
             foreach ($product->selected_ingredients as $ingredient) {
                 $ingredients[$ingredient] = ($ingredients[$ingredient] ?? 0) + 1;
             }
         }
-        
+
         arsort($ingredients);
         return array_slice($ingredients, 0, 5, true);
     }
@@ -545,13 +544,13 @@ class CustomProductController extends Controller
     {
         $products = CustomProduct::all();
         $ingredients = [];
-        
+
         foreach ($products as $product) {
             foreach ($product->selected_ingredients as $ingredient) {
                 $ingredients[$ingredient] = ($ingredients[$ingredient] ?? 0) + 1;
             }
         }
-        
+
         arsort($ingredients);
         return array_slice($ingredients, 0, 10, true);
     }
@@ -570,7 +569,7 @@ class CustomProductController extends Controller
     {
         $products = CustomProduct::all();
         $allergies = [];
-        
+
         foreach ($products as $product) {
             if (isset($product->profile_data['allergies'])) {
                 foreach ($product->profile_data['allergies'] as $allergy) {
@@ -578,7 +577,7 @@ class CustomProductController extends Controller
                 }
             }
         }
-        
+
         arsort($allergies);
         return $allergies;
     }
@@ -600,7 +599,7 @@ class CustomProductController extends Controller
 
             // MongoDB Service integration
             // MongoService::logCustomProductActivity($analyticsData);
-            
+
         } catch (\Exception $e) {
             \Log::error('Failed to log custom product analytics: ' . $e->getMessage());
         }

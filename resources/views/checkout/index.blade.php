@@ -25,6 +25,15 @@
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
         @apply ring-2 ring-pink-500 border-pink-500;
     }
+    .checkout-type-badge {
+        @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+    }
+    .checkout-type-cart {
+        @apply bg-blue-100 text-blue-800;
+    }
+    .checkout-type-direct {
+        @apply bg-green-100 text-green-800;
+    }
 </style>
 @endpush
 
@@ -54,8 +63,13 @@
         <nav class="text-sm text-gray-600">
             <a href="{{ route('dashboard') }}" class="hover:text-pink-600">Dashboard</a>
             <span class="mx-2">/</span>
-            <a href="{{ route('cart.index') }}" class="hover:text-pink-600">Cart</a>
-            <span class="mx-2">/</span>
+            @if($checkoutType === 'cart')
+                <a href="{{ route('cart.index') }}" class="hover:text-pink-600">Cart</a>
+                <span class="mx-2">/</span>
+            @else
+                <a href="{{ route('products.index') }}" class="hover:text-pink-600">Products</a>
+                <span class="mx-2">/</span>
+            @endif
             <span class="text-gray-400">Checkout</span>
         </nav>
     </div>
@@ -63,10 +77,17 @@
     <!-- Progress Indicator -->
     <div class="container mx-auto px-4 mb-8">
         <ol class="flex items-center justify-center space-x-8 step-indicator">
-            <li class="completed flex items-center space-x-2">
-                <span></span>
-                <span class="text-sm font-medium text-green-600">Cart</span>
-            </li>
+            @if($checkoutType === 'cart')
+                <li class="completed flex items-center space-x-2">
+                    <span></span>
+                    <span class="text-sm font-medium text-green-600">Cart</span>
+                </li>
+            @else
+                <li class="completed flex items-center space-x-2">
+                    <span></span>
+                    <span class="text-sm font-medium text-green-600">Product</span>
+                </li>
+            @endif
             <li class="active flex items-center space-x-2">
                 <span></span>
                 <span class="text-sm font-medium text-pink-600">Checkout</span>
@@ -84,10 +105,24 @@
             <!-- Checkout Form -->
             <div class="lg:col-span-2">
                 <div class="bg-white rounded-lg shadow-md p-8">
-                    <h1 class="text-3xl font-bold mb-8">Secure Checkout</h1>
+                    <!-- Checkout Type Indicator -->
+                    <div class="flex items-center justify-between mb-6">
+                        <h1 class="text-3xl font-bold">Secure Checkout</h1>
+                        <span class="checkout-type-badge {{ $checkoutType === 'cart' ? 'checkout-type-cart' : 'checkout-type-direct' }}">
+                            <i class="fas {{ $checkoutType === 'cart' ? 'fa-shopping-cart' : 'fa-bolt' }} mr-1"></i>
+                            {{ $checkoutType === 'cart' ? 'Cart Checkout' : 'Direct Purchase' }}
+                        </span>
+                    </div>
 
                     <form action="{{ route('checkout.process') }}" method="POST" id="checkoutForm">
                         @csrf
+                        <input type="hidden" name="checkout_type" value="{{ $checkoutType }}">
+                        
+                        @if($checkoutType === 'direct' && isset($directProduct))
+                            <input type="hidden" name="product_id" value="{{ $directProduct['product_id'] }}">
+                            <input type="hidden" name="product_type" value="{{ $directProduct['type'] }}">
+                            <input type="hidden" name="quantity" value="{{ $directProduct['quantity'] }}">
+                        @endif
 
                         <!-- Customer Information -->
                         <div class="mb-8">
@@ -99,14 +134,14 @@
                                 <div class="form-group">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
                                     <input type="text" 
-                                           value="{{ $user->first_name }}" 
+                                           value="{{ $user->first_name ?? explode(' ', $user->name)[0] }}" 
                                            readonly
                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50">
                                 </div>
                                 <div class="form-group">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
                                     <input type="text" 
-                                           value="{{ $user->last_name }}" 
+                                           value="{{ $user->last_name ?? (isset(explode(' ', $user->name)[1]) ? explode(' ', $user->name)[1] : '') }}" 
                                            readonly
                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50">
                                 </div>
@@ -178,6 +213,35 @@
                                 </div>
                             </div>
                         </div>
+
+                        @if($checkoutType === 'direct')
+                            <!-- Quantity Selection for Direct Purchase -->
+                            <div class="mb-8">
+                                <h2 class="text-xl font-semibold mb-4 flex items-center">
+                                    <i class="fas fa-hashtag text-pink-500 mr-2"></i>
+                                    Quantity
+                                </h2>
+                                <div class="flex items-center space-x-4">
+                                    <label class="text-sm font-medium text-gray-700">Quantity:</label>
+                                    <div class="flex items-center space-x-3">
+                                        <button type="button" id="decreaseQty" class="w-8 h-8 flex items-center justify-center border rounded-full hover:bg-gray-100 transition-colors">
+                                            <i class="fas fa-minus text-xs"></i>
+                                        </button>
+                                        <input type="number" 
+                                               name="quantity" 
+                                               id="quantityInput"
+                                               value="{{ $directProduct['quantity'] ?? 1 }}" 
+                                               min="1" 
+                                               max="10" 
+                                               class="w-16 text-center border rounded-lg py-1 focus:outline-none focus:ring-2 focus:ring-pink-500">
+                                        <button type="button" id="increaseQty" class="w-8 h-8 flex items-center justify-center border rounded-full hover:bg-gray-100 transition-colors">
+                                            <i class="fas fa-plus text-xs"></i>
+                                        </button>
+                                    </div>
+                                    <span class="text-sm text-gray-500">Maximum 10 items</span>
+                                </div>
+                            </div>
+                        @endif
 
                         <!-- Payment Method -->
                         <div class="mb-8">
@@ -266,7 +330,8 @@
                         <!-- Submit Button -->
                         <button type="submit" 
                                 class="w-full bg-pink-500 text-white py-4 rounded-full text-lg font-medium hover:bg-pink-600 transition-colors">
-                            <i class="fas fa-lock mr-2"></i>Place Order
+                            <i class="fas fa-lock mr-2"></i>
+                            {{ $checkoutType === 'direct' ? 'Purchase Now' : 'Place Order' }}
                         </button>
                     </form>
                 </div>
@@ -277,60 +342,84 @@
                 <div class="bg-white rounded-lg shadow-md p-6 sticky top-4">
                     <h2 class="text-xl font-bold mb-6">Order Summary</h2>
                     
-                    <!-- Cart Items -->
-                    <div class="space-y-4 mb-6">
-                        @foreach($cartItems as $item)
-                            <div class="flex items-center space-x-3">
+                    <!-- Items Display -->
+                    <div class="space-y-4 mb-6" id="orderItems">
+                        @if($checkoutType === 'cart')
+                            @foreach($cartItems as $item)
+                                <div class="flex items-center space-x-3">
+                                    <div class="relative">
+                                        <img src="{{ $item['image'] }}" 
+                                             alt="{{ $item['name'] }}" 
+                                             class="w-16 h-16 rounded-lg object-cover"
+                                             onerror="this.src='{{ asset('images/placeholders/placeholder1.png') }}'">
+                                        <span class="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                            {{ $item['quantity'] }}
+                                        </span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="font-medium text-gray-900 truncate">{{ $item['name'] }}</h4>
+                                        <p class="text-sm text-gray-500">{{ $item['category'] ?? 'Skincare Product' }}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="font-bold text-pink-600">Rs. {{ number_format($item['subtotal']) }}</span>
+                                    </div>
+                                </div>
+                            @endforeach
+                        @else
+                            <!-- Direct Purchase Item -->
+                            <div class="flex items-center space-x-3" id="directProductItem">
                                 <div class="relative">
-                                    <img src="{{ $item['image'] }}" 
-                                         alt="{{ $item['name'] }}" 
+                                    <img src="{{ $directProduct['image'] ?? asset('images/placeholders/placeholder1.png') }}" 
+                                         alt="{{ $directProduct['name'] }}" 
                                          class="w-16 h-16 rounded-lg object-cover"
                                          onerror="this.src='{{ asset('images/placeholders/placeholder1.png') }}'">
-                                    <span class="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                                        {{ $item['quantity'] }}
+                                    <span class="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center" id="itemQuantityBadge">
+                                        {{ $directProduct['quantity'] ?? 1 }}
                                     </span>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <h4 class="font-medium text-gray-900 truncate">{{ $item['name'] }}</h4>
-                                    <p class="text-sm text-gray-500">30ml Serum</p>
+                                    <h4 class="font-medium text-gray-900 truncate">{{ $directProduct['name'] }}</h4>
+                                    <p class="text-sm text-gray-500">{{ $directProduct['category'] ?? 'Skincare Product' }}</p>
                                 </div>
                                 <div class="text-right">
-                                    <span class="font-bold text-pink-600">Rs. {{ number_format($item['subtotal']) }}</span>
+                                    <span class="font-bold text-pink-600" id="itemSubtotal">Rs. {{ number_format(($directProduct['price'] ?? 0) * ($directProduct['quantity'] ?? 1)) }}</span>
                                 </div>
                             </div>
-                        @endforeach
+                        @endif
                     </div>
 
-                    <!-- Promo Code -->
-                    <div class="mb-6">
-                        <div class="flex space-x-2">
-                            <input type="text" 
-                                   placeholder="Promo code" 
-                                   class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
-                            <button class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 transition-colors">
-                                Apply
-                            </button>
+                    @if($checkoutType === 'cart')
+                        <!-- Promo Code for Cart -->
+                        <div class="mb-6">
+                            <div class="flex space-x-2">
+                                <input type="text" 
+                                       placeholder="Promo code" 
+                                       class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
+                                <button class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 transition-colors">
+                                    Apply
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    @endif
 
                     <!-- Order Totals -->
-                    <div class="space-y-3 mb-6">
+                    <div class="space-y-3 mb-6" id="orderTotals">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Subtotal:</span>
-                            <span class="font-medium">Rs. {{ number_format($subtotal) }}</span>
+                            <span class="font-medium" id="subtotalAmount">Rs. {{ number_format($subtotal) }}</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Tax (10%):</span>
-                            <span class="font-medium">Rs. {{ number_format($tax) }}</span>
+                            <span class="font-medium" id="taxAmount">Rs. {{ number_format($tax) }}</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Shipping:</span>
-                            <span class="font-medium text-green-600">Rs. {{ number_format($shipping) }}</span>
+                            <span class="font-medium text-green-600" id="shippingAmount">Rs. {{ number_format($shipping) }}</span>
                         </div>
                         <hr class="my-3">
                         <div class="flex justify-between text-lg font-bold">
                             <span>Total:</span>
-                            <span class="text-pink-600">Rs. {{ number_format($total) }}</span>
+                            <span class="text-pink-600" id="totalAmount">Rs. {{ number_format($total) }}</span>
                         </div>
                     </div>
 
@@ -371,8 +460,8 @@
 
 @push('scripts')
 <script>
-    // Auto-hide flash messages
     document.addEventListener('DOMContentLoaded', function() {
+        // Auto-hide flash messages
         setTimeout(() => {
             document.querySelectorAll('[class*="border-green-400"], [class*="border-red-400"]').forEach(el => {
                 if (el.querySelector('button')) {
@@ -382,75 +471,119 @@
                 }
             });
         }, 5000);
-    });
 
-    // Form validation and submission
-    document.getElementById('checkoutForm').addEventListener('submit', function(e) {
-        const requiredFields = this.querySelectorAll('[required]');
-        let isValid = true;
-
-        requiredFields.forEach(field => {
-            if (!field.value.trim()) {
-                isValid = false;
-                field.classList.add('border-red-500');
-                field.classList.remove('border-gray-300');
-            } else {
-                field.classList.add('border-gray-300');
-                field.classList.remove('border-red-500');
-            }
-        });
-
-        if (!isValid) {
-            e.preventDefault();
-            showError('Please fill in all required fields.');
-            return;
-        }
-
-        // Show loading state
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
-        submitBtn.disabled = true;
-
-        // Re-enable button after 10 seconds as fallback
-        setTimeout(() => {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        }, 10000);
-    });
-
-    // Phone number formatting
-    document.querySelector('input[name="phone"]').addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        if (value.startsWith('94')) {
-            value = '+' + value;
-        } else if (value.startsWith('0')) {
-            value = '+94 ' + value.substring(1);
-        } else if (value.length > 0 && !value.startsWith('+')) {
-            value = '+94 ' + value;
-        }
-        e.target.value = value;
-    });
-
-    // Payment method selection visual feedback
-    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            // Remove active class from all payment options
-            document.querySelectorAll('input[name="payment_method"]').forEach(r => {
-                r.closest('.border').classList.remove('border-pink-500', 'bg-pink-50');
-                r.closest('.border').classList.add('border-gray-200');
-            });
+        // Direct purchase quantity controls
+        @if($checkoutType === 'direct')
+            const quantityInput = document.getElementById('quantityInput');
+            const decreaseBtn = document.getElementById('decreaseQty');
+            const increaseBtn = document.getElementById('increaseQty');
+            const itemQuantityBadge = document.getElementById('itemQuantityBadge');
+            const itemSubtotal = document.getElementById('itemSubtotal');
             
-            // Add active class to selected option
-            if (this.checked) {
-                this.closest('.border').classList.add('border-pink-500', 'bg-pink-50');
-                this.closest('.border').classList.remove('border-gray-200');
-            }
-        });
-    });
+            const unitPrice = {{ $directProduct['price'] ?? 0 }};
 
-    // Initialize active payment method styling
-    document.addEventListener('DOMContentLoaded', function() {
+            function updateQuantity(newQuantity) {
+                if (newQuantity < 1) newQuantity = 1;
+                if (newQuantity > 10) newQuantity = 10;
+                
+                quantityInput.value = newQuantity;
+                itemQuantityBadge.textContent = newQuantity;
+                
+                // Update pricing
+                const subtotal = unitPrice * newQuantity;
+                const tax = subtotal * 0.1;
+                const shipping = subtotal > 5000 ? 0 : 500;
+                const total = subtotal + tax + shipping;
+                
+                itemSubtotal.textContent = 'Rs. ' + subtotal.toLocaleString();
+                document.getElementById('subtotalAmount').textContent = 'Rs. ' + subtotal.toLocaleString();
+                document.getElementById('taxAmount').textContent = 'Rs. ' + tax.toLocaleString();
+                document.getElementById('shippingAmount').textContent = 'Rs. ' + shipping.toLocaleString();
+                document.getElementById('totalAmount').textContent = 'Rs. ' + total.toLocaleString();
+                
+                // Update hidden quantity input
+                document.querySelector('input[name="quantity"]').value = newQuantity;
+            }
+
+            decreaseBtn.addEventListener('click', () => {
+                updateQuantity(parseInt(quantityInput.value) - 1);
+            });
+
+            increaseBtn.addEventListener('click', () => {
+                updateQuantity(parseInt(quantityInput.value) + 1);
+            });
+
+            quantityInput.addEventListener('change', () => {
+                updateQuantity(parseInt(quantityInput.value));
+            });
+        @endif
+
+        // Form validation and submission
+        document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+            const requiredFields = this.querySelectorAll('[required]');
+            let isValid = true;
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    field.classList.add('border-red-500');
+                    field.classList.remove('border-gray-300');
+                } else {
+                    field.classList.add('border-gray-300');
+                    field.classList.remove('border-red-500');
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                showError('Please fill in all required fields.');
+                return;
+            }
+
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+            submitBtn.disabled = true;
+
+            // Re-enable button after 10 seconds as fallback
+            setTimeout(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }, 10000);
+        });
+
+        // Phone number formatting
+        document.querySelector('input[name="phone"]').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.startsWith('94')) {
+                value = '+' + value;
+            } else if (value.startsWith('0')) {
+                value = '+94 ' + value.substring(1);
+            } else if (value.length > 0 && !value.startsWith('+')) {
+                value = '+94 ' + value;
+            }
+            e.target.value = value;
+        });
+
+        // Payment method selection visual feedback
+        document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                // Remove active class from all payment options
+                document.querySelectorAll('input[name="payment_method"]').forEach(r => {
+                    r.closest('.border').classList.remove('border-pink-500', 'bg-pink-50');
+                    r.closest('.border').classList.add('border-gray-200');
+                });
+                
+                // Add active class to selected option
+                if (this.checked) {
+                    this.closest('.border').classList.add('border-pink-500', 'bg-pink-50');
+                    this.closest('.border').classList.remove('border-gray-200');
+                }
+            });
+        });
+
+        // Initialize active payment method styling
         const checkedRadio = document.querySelector('input[name="payment_method"]:checked');
         if (checkedRadio) {
             checkedRadio.closest('.border').classList.add('border-pink-500', 'bg-pink-50');
