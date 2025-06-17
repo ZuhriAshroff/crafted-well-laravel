@@ -157,8 +157,8 @@
                     </p>
                     <a href="{{ route('survey.index') }}"
                         class="inline-block bg-gradient-to-r from-purple-500 to-pink-500 text-white 
-                                                                                          px-8 py-3 rounded-full text-lg font-semibold hover:opacity-90 
-                                                                                          transition-all duration-300 transform hover:scale-105">
+                                                                                                  px-8 py-3 rounded-full text-lg font-semibold hover:opacity-90 
+                                                                                                  transition-all duration-300 transform hover:scale-105">
                         Create Custom Product
                     </a>
                 </div>
@@ -301,100 +301,100 @@
                     const discountedPrice = Math.floor(originalPrice * (1 - (discountPercentage / 100)));
 
                     return `
-                                            <div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden relative">
-                                                ${isBestseller ?
+                                                    <div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden relative">
+                                                        ${isBestseller ?
                             `<div class="absolute top-4 left-4 z-10">
-                                                        <span class="bestseller-badge text-white text-xs font-bold px-3 py-1 rounded-full">
-                                                            ⭐ BESTSELLER
-                                                        </span>
-                                                    </div>` : ''
+                                                                <span class="bestseller-badge text-white text-xs font-bold px-3 py-1 rounded-full">
+                                                                    ⭐ BESTSELLER
+                                                                </span>
+                                                            </div>` : ''
                         }
 
-                                                ${product.image_url ?
+                                                        ${product.image_url ?
                             `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.product_name)}" class="product-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                                     <div class="h-48 bg-gradient-to-br ${colors.bg} items-center justify-center image-placeholder" style="display: none;">
-                                                        <div class="text-center">
-                                                            <div class="w-16 h-16 bg-white rounded-full shadow-lg mx-auto mb-3 flex items-center justify-center">
-                                                                <svg class="w-8 h-8 text-${colors.primary}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    ${iconPath}
-                                                                </svg>
-                                                            </div>
-                                                            <span class="text-${colors.primary}-600 font-medium text-sm">${ucfirst(product.base_category)}</span>
-                                                        </div>
-                                                     </div>` :
+                                                             <div class="h-48 bg-gradient-to-br ${colors.bg} items-center justify-center image-placeholder" style="display: none;">
+                                                                <div class="text-center">
+                                                                    <div class="w-16 h-16 bg-white rounded-full shadow-lg mx-auto mb-3 flex items-center justify-center">
+                                                                        <svg class="w-8 h-8 text-${colors.primary}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            ${iconPath}
+                                                                        </svg>
+                                                                    </div>
+                                                                    <span class="text-${colors.primary}-600 font-medium text-sm">${ucfirst(product.base_category)}</span>
+                                                                </div>
+                                                             </div>` :
                             `<div class="h-48 bg-gradient-to-br ${colors.bg} flex items-center justify-center image-placeholder">
-                                                        <div class="text-center">
-                                                            <div class="w-16 h-16 bg-white rounded-full shadow-lg mx-auto mb-3 flex items-center justify-center">
-                                                                <svg class="w-8 h-8 text-${colors.primary}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    ${iconPath}
-                                                                </svg>
-                                                            </div>
-                                                            <span class="text-${colors.primary}-600 font-medium text-sm">${ucfirst(product.base_category)}</span>
-                                                        </div>
-                                                    </div>`
+                                                                <div class="text-center">
+                                                                    <div class="w-16 h-16 bg-white rounded-full shadow-lg mx-auto mb-3 flex items-center justify-center">
+                                                                        <svg class="w-8 h-8 text-${colors.primary}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            ${iconPath}
+                                                                        </svg>
+                                                                    </div>
+                                                                    <span class="text-${colors.primary}-600 font-medium text-sm">${ucfirst(product.base_category)}</span>
+                                                                </div>
+                                                            </div>`
                         }
 
-                                                <div class="p-6">
-                                                    <div class="flex items-start justify-between mb-3">
-                                                        <h3 class="text-xl font-semibold text-gray-900 flex-1 pr-2">${escapeHtml(product.product_name)}</h3>
-                                                        <span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${colors.primary}-100 text-${colors.primary}-800 flex-shrink-0">
-                                                            Ready to ship
-                                                        </span>
-                                                    </div>
+                                                        <div class="p-6">
+                                                            <div class="flex items-start justify-between mb-3">
+                                                                <h3 class="text-xl font-semibold text-gray-900 flex-1 pr-2">${escapeHtml(product.product_name)}</h3>
+                                                                <span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${colors.primary}-100 text-${colors.primary}-800 flex-shrink-0">
+                                                                    Ready to ship
+                                                                </span>
+                                                            </div>
 
-                                                    <p class="text-gray-600 mb-4 text-sm leading-relaxed">
-                                                        ${product.description ? escapeHtml(product.description) : `A premium ${product.base_category.toLowerCase()} with clinically-proven ingredients. Can be customized to your specific skin needs.`}
-                                                    </p>
+                                                            <p class="text-gray-600 mb-4 text-sm leading-relaxed">
+                                                                ${product.description ? escapeHtml(product.description) : `A premium ${product.base_category.toLowerCase()} with clinically-proven ingredients. Can be customized to your specific skin needs.`}
+                                                            </p>
 
-                                                    <div class="space-y-2 mb-5">
-                                                        <div class="flex items-center text-sm text-gray-500">
-                                                            <svg class="w-4 h-4 mr-2 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                                            </svg>
-                                                            Dermatologist approved
-                                                        </div>
-                                                        <div class="flex items-center text-sm text-gray-500">
-                                                            <svg class="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                                            </svg>
-                                                            30ml premium bottle
-                                                        </div>
-                                                        <div class="flex items-center text-sm text-gray-500">
-                                                            <svg class="w-4 h-4 mr-2 text-purple-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                                            </svg>
-                                                            Free customization available
-                                                        </div>
-                                                    </div>
+                                                            <div class="space-y-2 mb-5">
+                                                                <div class="flex items-center text-sm text-gray-500">
+                                                                    <svg class="w-4 h-4 mr-2 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                                                    </svg>
+                                                                    Dermatologist approved
+                                                                </div>
+                                                                <div class="flex items-center text-sm text-gray-500">
+                                                                    <svg class="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                                                    </svg>
+                                                                    30ml premium bottle
+                                                                </div>
+                                                                <div class="flex items-center text-sm text-gray-500">
+                                                                    <svg class="w-4 h-4 mr-2 text-purple-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                                                    </svg>
+                                                                    Free customization available
+                                                                </div>
+                                                            </div>
 
-                                                    <div class="flex items-center justify-between mb-4">
-                                                        <div class="flex-1">
-                                                            <div class="flex items-center space-x-2 flex-wrap">
-                                                                <span class="text-2xl font-bold text-gray-900">LKR ${discountedPrice.toLocaleString()}</span>
-                                                                ${originalPrice > discountedPrice ?
+                                                            <div class="flex items-center justify-between mb-4">
+                                                                <div class="flex-1">
+                                                                    <div class="flex items-center space-x-2 flex-wrap">
+                                                                        <span class="text-2xl font-bold text-gray-900">LKR ${discountedPrice.toLocaleString()}</span>
+                                                                        ${originalPrice > discountedPrice ?
                             `<span class="text-lg text-gray-500 line-through">LKR ${originalPrice.toLocaleString()}</span>` : ''
                         }
-                                                            </div>
-                                                            ${originalPrice > discountedPrice ?
+                                                                    </div>
+                                                                    ${originalPrice > discountedPrice ?
                             `<span class="text-sm text-green-600 font-medium">Save LKR ${(originalPrice - discountedPrice).toLocaleString()}</span>` : ''
                         }
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="space-y-2">
+                                                                <button onclick="addToCart('${product.product_id}', '${escapeHtml(product.product_name)}', ${discountedPrice})" 
+                                                                        class="add-to-cart-btn w-full bg-${colors.primary}-500 text-white px-4 py-3 rounded-lg hover:bg-${colors.primary}-600 transition-all font-medium" 
+                                                                        data-product-id="${product.product_id}">
+                                                                    <i class="fas fa-shopping-cart mr-2"></i>Add to Cart
+                                                                </button>
+                                                                <a href="{{ route('survey.index') }}?customize=${product.product_id}" 
+                                                                   class="w-full border-2 border-${colors.primary}-500 text-${colors.primary}-600 px-4 py-2 rounded-lg hover:bg-${colors.primary}-50 transition-colors text-center font-medium text-sm block">
+                                                                    <i class="fas fa-cog mr-2"></i>Customize This Product
+                                                                </a>
+                                                            </div>
                                                         </div>
                                                     </div>
-
-                                                    <div class="space-y-2">
-                                                        <button onclick="addToCart('${product.product_id}', '${escapeHtml(product.product_name)}', ${discountedPrice})" 
-                                                                class="add-to-cart-btn w-full bg-${colors.primary}-500 text-white px-4 py-3 rounded-lg hover:bg-${colors.primary}-600 transition-all font-medium" 
-                                                                data-product-id="${product.product_id}">
-                                                            <i class="fas fa-shopping-cart mr-2"></i>Add to Cart
-                                                        </button>
-                                                        <a href="{{ route('survey.index') }}?customize=${product.product_id}" 
-                                                           class="w-full border-2 border-${colors.primary}-500 text-${colors.primary}-600 px-4 py-2 rounded-lg hover:bg-${colors.primary}-50 transition-colors text-center font-medium text-sm block">
-                                                            <i class="fas fa-cog mr-2"></i>Customize This Product
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `;
+                                                `;
                 }).join('');
 
                 // Add animations
@@ -477,21 +477,21 @@
                 const successDiv = document.createElement('div');
                 successDiv.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-lg z-50 shadow-lg';
                 successDiv.innerHTML = `
-                                        <div class="flex items-center">
-                                            <svg class="w-5 h-5 mr-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                            </svg>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="font-medium">Added to cart!</p>
-                                                <p class="text-sm truncate">${productName}</p>
-                                            </div>
-                                            <button class="ml-4 flex-shrink-0" onclick="this.parentElement.parentElement.remove()">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    `;
+                                                <div class="flex items-center">
+                                                    <svg class="w-5 h-5 mr-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                                    </svg>
+                                                    <div class="flex-1 min-w-0">
+                                                        <p class="font-medium">Added to cart!</p>
+                                                        <p class="text-sm truncate">${productName}</p>
+                                                    </div>
+                                                    <button class="ml-4 flex-shrink-0" onclick="this.parentElement.parentElement.remove()">
+                                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            `;
                 document.body.appendChild(successDiv);
                 setTimeout(() => successDiv.remove(), 4000);
             }
@@ -500,21 +500,21 @@
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg z-50 shadow-lg';
                 errorDiv.innerHTML = `
-                                        <div class="flex items-center">
-                                            <svg class="w-5 h-5 mr-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                            </svg>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="font-medium">Error!</p>
-                                                <p class="text-sm">${message}</p>
-                                            </div>
-                                            <button class="ml-4 flex-shrink-0" onclick="this.parentElement.parentElement.remove()">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    `;
+                                                <div class="flex items-center">
+                                                    <svg class="w-5 h-5 mr-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                                    </svg>
+                                                    <div class="flex-1 min-w-0">
+                                                        <p class="font-medium">Error!</p>
+                                                        <p class="text-sm">${message}</p>
+                                                    </div>
+                                                    <button class="ml-4 flex-shrink-0" onclick="this.parentElement.parentElement.remove()">
+                                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            `;
                 document.body.appendChild(errorDiv);
                 setTimeout(() => errorDiv.remove(), 5000);
             }

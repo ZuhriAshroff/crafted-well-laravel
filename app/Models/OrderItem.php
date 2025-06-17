@@ -28,11 +28,11 @@ class OrderItem extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'order_id',          // ✅ Matches database
-        'product_id',        // ✅ Matches database
-        'custom_product_id', // ✅ Matches database
-        'quantity',          // ✅ Matches database
-        'product_price',     // ✅ Matches database
+        'order_id',
+        'product_id',
+        'custom_product_id',
+        'quantity',
+        'product_price',
     ];
 
 
