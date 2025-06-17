@@ -44,8 +44,8 @@ class AdminController extends Controller
     public function login(Request $request): JsonResponse
     {
         // Rate limiting
-        $key = Str::transliterate(Str::lower($request->input('email')).'|'.$request->ip());
-        
+        $key = Str::transliterate(Str::lower($request->input('email')) . '|' . $request->ip());
+
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
             return response()->json([
@@ -62,10 +62,10 @@ class AdminController extends Controller
         try {
             // Find user by email
             $user = User::where('email', $request->email)->first();
-            
+
             if (!$user || !Hash::check($request->password, $user->password)) {
                 RateLimiter::hit($key);
-                
+
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Invalid credentials'
@@ -139,11 +139,11 @@ class AdminController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             // Revoke all tokens for this user
             if ($user) {
                 $user->tokens()->delete();
-                
+
                 \Log::info('Admin logout', [
                     'id' => $user->id,
                     'email' => $user->email,
@@ -153,7 +153,7 @@ class AdminController extends Controller
 
             // Logout
             Auth::logout();
-            
+
             // Invalidate session
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -172,7 +172,7 @@ class AdminController extends Controller
 
         } catch (\Exception $e) {
             \Log::error('Admin logout error: ' . $e->getMessage());
-            
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'status' => 'error',
@@ -191,7 +191,7 @@ class AdminController extends Controller
     public function checkAuth(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user || !$user->isAdmin()) {
             return response()->json([
                 'status' => 'error',
@@ -240,7 +240,7 @@ class AdminController extends Controller
     {
         try {
             $period = $request->get('period', '30days'); // 7days, 30days, 90days, 1year
-            
+
             $analytics = [
                 'overview' => $this->getOverviewStats(),
                 'revenue' => $this->getRevenueStats($period),
@@ -308,46 +308,39 @@ class AdminController extends Controller
      */
     public function userManagement(Request $request): View
     {
-        $query = User::query();
+        $query = \App\Models\User::query();
 
         // Apply filters
-        if ($request->status) {
-            if ($request->status === 'active') {
-                $query->where(function($q) {
-                    $q->where('is_active', true)->orWhere('status', 'active');
-                });
-            } elseif ($request->status === 'inactive') {
-                $query->where(function($q) {
-                    $q->where('is_active', false)->orWhere('status', 'inactive');
-                });
-            }
+        if ($request->search) {
+            $query->where(function ($q) use ($request) {
+                $q->where('email', 'like', "%{$request->search}%")
+                    ->orWhere('first_name', 'like', "%{$request->search}%")
+                    ->orWhere('last_name', 'like', "%{$request->search}%")
+                    ->orWhere('name', 'like', "%{$request->search}%");
+            });
         }
 
         if ($request->role) {
             $query->where('role', $request->role);
         }
 
-        if ($request->search) {
-            $query->where(function($q) use ($request) {
-                $q->where('email', 'like', "%{$request->search}%")
-                  ->orWhere('first_name', 'like', "%{$request->search}%")
-                  ->orWhere('last_name', 'like', "%{$request->search}%");
-            });
-        }
+        // Get users with order count (handle if orders relationship doesn't exist)
+        $users = $query->orderBy('created_at', 'desc')->paginate(20);
 
-        $users = $query->withCount(['orders', 'customProducts'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        // Calculate stats
+        $totalUsers = \App\Models\User::count();
+        $adminUsers = \App\Models\User::where('role', 'admin')->count();
 
-        return view('admin.users.index', [
-            'users' => $users,
-            'userStats' => $this->getUserStats(),
-            'currentFilters' => [
-                'status' => $request->status,
-                'role' => $request->role,
-                'search' => $request->search,
-            ]
-        ]);
+        $stats = [
+            'total_users' => $totalUsers,
+            'regular_users' => $totalUsers - $adminUsers, // Regular users = total - admins
+            'admin_users' => $adminUsers,
+            'new_users_month' => \App\Models\User::whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+        ];
+
+        return view('admin.users.index', compact('users', 'stats'));
     }
 
     /**
@@ -391,7 +384,7 @@ class AdminController extends Controller
 
         try {
             $data = $this->prepareExportData($request->type, $request->only(['date_from', 'date_to']));
-            
+
             // In a real implementation, you'd queue this for large datasets
             return response()->json([
                 'status' => 'success',
@@ -511,7 +504,7 @@ class AdminController extends Controller
                 ->orderBy('order_date', 'desc')
                 ->limit(5)
                 ->get()
-                ->map(function($order) {
+                ->map(function ($order) {
                     return [
                         'id' => $order->order_id,
                         'user' => $order->user->name ?? 'N/A',
@@ -523,7 +516,7 @@ class AdminController extends Controller
             'recent_users' => User::orderBy('created_at', 'desc')
                 ->limit(5)
                 ->get(['id', 'first_name', 'last_name', 'email', 'created_at'])
-                ->map(function($user) {
+                ->map(function ($user) {
                     return [
                         'id' => $user->id,
                         'name' => $user->name,
@@ -535,7 +528,7 @@ class AdminController extends Controller
                 ->orderBy('formulation_date', 'desc')
                 ->limit(5)
                 ->get()
-                ->map(function($product) {
+                ->map(function ($product) {
                     return [
                         'id' => $product->custom_product_id,
                         'name' => $product->product_name,
@@ -563,26 +556,30 @@ class AdminController extends Controller
         $startDate = now()->subDays($days);
 
         return [
-            'top_customers' => User::withSum(['orders' => function($query) use ($startDate) {
+            'top_customers' => User::withSum([
+                'orders' => function ($query) use ($startDate) {
                     $query->where('payment_status', 'paid')->where('order_date', '>=', $startDate);
-                }], 'total_amount')
+                }
+            ], 'total_amount')
                 ->orderBy('orders_sum_total_amount', 'desc')
                 ->limit(5)
                 ->get(['id', 'first_name', 'last_name', 'email'])
-                ->map(function($user) {
+                ->map(function ($user) {
                     return [
                         'name' => $user->name,
                         'email' => $user->email,
                         'total_spent' => $user->orders_sum_total_amount ?? 0,
                     ];
                 }),
-            'popular_base_formulations' => BaseFormulation::withCount(['customProducts' => function($query) use ($startDate) {
+            'popular_base_formulations' => BaseFormulation::withCount([
+                'customProducts' => function ($query) use ($startDate) {
                     $query->where('formulation_date', '>=', $startDate);
-                }])
+                }
+            ])
                 ->orderBy('custom_products_count', 'desc')
                 ->limit(5)
                 ->get(['base_formulation_id', 'base_name'])
-                ->map(function($formulation) {
+                ->map(function ($formulation) {
                     return [
                         'name' => $formulation->base_name,
                         'usage_count' => $formulation->custom_products_count,
@@ -632,7 +629,7 @@ class AdminController extends Controller
 
     private function getPeriodDays(string $period): int
     {
-        return match($period) {
+        return match ($period) {
             '7days' => 7,
             '30days' => 30,
             '90days' => 90,
@@ -645,13 +642,13 @@ class AdminController extends Controller
     {
         $customProducts = CustomProduct::all();
         $ingredients = [];
-        
+
         foreach ($customProducts as $product) {
             foreach ($product->selected_ingredients as $ingredient) {
                 $ingredients[$ingredient] = ($ingredients[$ingredient] ?? 0) + 1;
             }
         }
-        
+
         arsort($ingredients);
         return array_slice($ingredients, 0, 10, true);
     }
@@ -661,7 +658,7 @@ class AdminController extends Controller
         try {
             DB::connection()->getPdo();
             $tablesCount = DB::select("SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE()")[0]->count;
-            
+
             return [
                 'status' => 'healthy',
                 'message' => 'Database connection successful',
@@ -717,7 +714,7 @@ class AdminController extends Controller
         try {
             cache()->put('health_check', 'test', 60);
             $value = cache()->get('health_check');
-            
+
             return [
                 'status' => $value === 'test' ? 'healthy' : 'warning',
                 'message' => 'Cache system operational',
@@ -756,7 +753,7 @@ class AdminController extends Controller
     private function prepareExportData(string $type, array $filters): array
     {
         $query = null;
-        
+
         switch ($type) {
             case 'users':
                 $query = User::with('orders');
@@ -774,16 +771,16 @@ class AdminController extends Controller
 
         // Apply date filters if provided
         if (!empty($filters['date_from'])) {
-            $dateField = match($type) {
+            $dateField = match ($type) {
                 'users' => 'created_at',
                 'orders' => 'order_date',
                 'products' => 'created_at',
                 'custom_products' => 'formulation_date',
                 default => 'created_at'
             };
-            
+
             $query->whereDate($dateField, '>=', $filters['date_from']);
-            
+
             if (!empty($filters['date_to'])) {
                 $query->whereDate($dateField, '<=', $filters['date_to']);
             }
@@ -791,4 +788,5 @@ class AdminController extends Controller
 
         return $query->limit(1000)->get()->toArray(); // Limit for safety
     }
+
 }

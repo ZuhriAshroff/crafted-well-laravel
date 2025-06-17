@@ -14,7 +14,6 @@ class OrderController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('auth');
     }
 
     /**
@@ -144,8 +143,17 @@ class OrderController extends Controller
 
         $orders = $query->orderBy('order_date', 'desc')->paginate(20);
 
+        // ADD THIS: Calculate stats for the dashboard cards
+        $stats = [
+            'total_orders' => Order::count(),
+            'completed_orders' => Order::where('shipping_status', 'delivered')->count(),
+            'pending_orders' => Order::where('payment_status', 'pending')->count(),
+            'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
+        ];
+
         return view('admin.orders.index', [
             'orders' => $orders,
+            'stats' => $stats, // ADD THIS LINE
             'paymentStatuses' => Order::getPaymentStatusOptions(),
             'shippingStatuses' => Order::getShippingStatusOptions(),
             'currentFilters' => [

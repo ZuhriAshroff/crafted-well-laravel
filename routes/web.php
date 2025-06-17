@@ -247,6 +247,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('/{product}', [ProductController::class, 'destroy'])->name('destroy');
             Route::post('/{productId}/delete', [ProductController::class, 'destroy'])->name('destroy.json');
             Route::get('/analytics/overview', [ProductController::class, 'analytics'])->name('analytics');
+            // In your web.php admin routes section
+            Route::get('/admin/products/data', [ProductController::class, 'getAdminProducts'])->name('admin.products.data');
+            Route::get('/admin/products/options', [ProductController::class, 'getProductOptions'])->name('admin.products.options');
         });
 
         // ========================================
@@ -270,6 +273,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [OrderController::class, 'adminIndex'])->name('index');
             Route::get('/{order}', [OrderController::class, 'adminShow'])->name('show');
             Route::put('/{order}', [OrderController::class, 'adminUpdate'])->name('update');
+            Route::get('/export/data', [OrderController::class, 'exportOrders'])->name('export'); // For the export button
             Route::get('/analytics/overview', [OrderController::class, 'analytics'])->name('analytics');
         });
 

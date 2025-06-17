@@ -184,7 +184,6 @@ class CheckoutController extends Controller
                     ->firstOrFail();
 
                 $itemPrice = $customProduct->total_price;
-                $productName = $customProduct->product_name;
                 $productData = [
                     'custom_product_id' => $customProduct->custom_product_id,
                     'product_id' => null
@@ -198,7 +197,6 @@ class CheckoutController extends Controller
                 $basePrice = $product->standard_price;
                 $discountPercentage = $product->discount_percentage ?? 15;
                 $itemPrice = $basePrice * (1 - ($discountPercentage / 100));
-                $productName = $product->product_name;
                 $productData = [
                     'product_id' => $product->product_id,
                     'custom_product_id' => null
@@ -210,50 +208,42 @@ class CheckoutController extends Controller
             $shipping = $subtotal > 5000 ? 0 : 500;
             $total = $subtotal + $tax + $shipping;
 
-            // Generate order number
-            $orderNumber = 'CW-DP-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
-
-            // Create the order
+            // ✅ FIXED: Create order with ONLY existing database fields
             $order = Order::create([
-                'order_number' => $orderNumber,
-                'user_id' => $user->id, // Use 'id' not 'user_id' based on your User model
-                'subtotal' => $subtotal,
-                'tax_amount' => $tax,
-                'shipping_amount' => $shipping,
+                'user_id' => $user->id,
+                'order_date' => now(),
                 'total_amount' => $total,
                 'payment_status' => 'pending',
-                'payment_method' => $request->payment_method,
                 'shipping_status' => 'processing',
                 'delivery_method' => 'standard',
-                'shipping_address' => json_encode([
-                    'address' => $request->shipping_address,
-                    'city' => $request->city,
-                    'postal_code' => $request->postal_code
-                ]),
-                'phone' => $request->phone,
-                'order_notes' => $request->order_notes,
-                'order_date' => now()
             ]);
 
-            // Create order item
+            // ✅ FIXED: Create order item with ONLY existing database fields
             OrderItem::create([
                 'order_id' => $order->order_id,
                 'product_id' => $productData['product_id'],
                 'custom_product_id' => $productData['custom_product_id'],
-                'product_type' => $productType,
-                'product_name' => $productName,
-                'unit_price' => $itemPrice,
                 'quantity' => $quantity,
-                'total_price' => $itemPrice * $quantity,
-                'product_details' => json_encode([
-                    'original_price' => $productType === 'ready_product' ? ($product->standard_price ?? 0) : null,
-                    'discount_applied' => $productType === 'ready_product' ? ($product->discount_percentage ?? 0) : null
-                ])
+                'product_price' => $itemPrice,
             ]);
+
+            // Generate order number for display
+            $orderNumber = 'CW-DP-' . str_pad($order->order_id, 5, '0', STR_PAD_LEFT);
 
             return redirect()->route('checkout.success')
                 ->with('success', "Order placed successfully! Your order number is: {$orderNumber}")
-                ->with('order_id', $order->order_id);
+                ->with('order_id', $order->order_id)
+                ->with('order_details', [
+                    'subtotal' => $subtotal,
+                    'tax' => $tax,
+                    'shipping' => $shipping,
+                    'total' => $total,
+                    'payment_method' => $request->payment_method,
+                    'shipping_address' => $request->shipping_address,
+                    'city' => $request->city,
+                    'postal_code' => $request->postal_code,
+                    'phone' => $request->phone
+                ]);
         });
     }
 
@@ -281,59 +271,49 @@ class CheckoutController extends Controller
             $shipping = $subtotal > 5000 ? 0 : 500;
             $total = $subtotal + $tax + $shipping;
 
-            // Generate order number
-            $orderNumber = 'CW-CART-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
-
-            // Create the order
+            // ✅ FIXED: Create order with ONLY existing database fields
             $order = Order::create([
-                'order_number' => $orderNumber,
-                'user_id' => $user->id, // Use 'id' not 'user_id' based on your User model
-                'subtotal' => $subtotal,
-                'tax_amount' => $tax,
-                'shipping_amount' => $shipping,
+                'user_id' => $user->id,
+                'order_date' => now(),
                 'total_amount' => $total,
                 'payment_status' => 'pending',
-                'payment_method' => $request->payment_method,
                 'shipping_status' => 'processing',
                 'delivery_method' => 'standard',
-                'shipping_address' => json_encode([
-                    'address' => $request->shipping_address,
-                    'city' => $request->city,
-                    'postal_code' => $request->postal_code
-                ]),
-                'phone' => $request->phone,
-                'order_notes' => $request->order_notes,
-                'order_date' => now()
             ]);
 
-            // Create order items
+            // ✅ FIXED: Create order items with ONLY existing database fields
             foreach ($allCartItems as $item) {
                 OrderItem::create([
                     'order_id' => $order->order_id,
                     'product_id' => $item['type'] === 'ready_product' ? $item['id'] : null,
                     'custom_product_id' => $item['type'] === 'custom_product' ? $item['id'] : null,
-                    'product_type' => $item['type'],
-                    'product_name' => $item['name'],
-                    'unit_price' => $item['price'],
                     'quantity' => $item['quantity'],
-                    'total_price' => $item['subtotal'],
-                    'product_details' => json_encode([
-                        'original_price' => $item['original_price'] ?? null,
-                        'category' => $item['category'] ?? null,
-                        'image' => $item['image'] ?? null
-                    ])
+                    'product_price' => $item['price'],
                 ]);
             }
 
             // Clear both carts after successful order
             session()->forget(['cart', 'ready_products_cart']);
 
+            // Generate order number for display
+            $orderNumber = 'CW-CART-' . str_pad($order->order_id, 5, '0', STR_PAD_LEFT);
+
             return redirect()->route('checkout.success')
                 ->with('success', "Order placed successfully! Your order number is: {$orderNumber}")
-                ->with('order_id', $order->order_id);
+                ->with('order_id', $order->order_id)
+                ->with('order_details', [
+                    'subtotal' => $subtotal,
+                    'tax' => $tax,
+                    'shipping' => $shipping,
+                    'total' => $total,
+                    'payment_method' => $request->payment_method,
+                    'shipping_address' => $request->shipping_address,
+                    'city' => $request->city,
+                    'postal_code' => $request->postal_code,
+                    'phone' => $request->phone
+                ]);
         });
     }
-
     /**
      * Show order success page
      */

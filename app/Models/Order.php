@@ -30,7 +30,7 @@ class Order extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'id',
+        'user_id',
         'order_date',
         'total_amount',
         'payment_status',
@@ -59,7 +59,7 @@ class Order extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($order) {
             if (empty($order->order_date)) {
                 $order->order_date = now();
@@ -180,9 +180,9 @@ class Order extends Model
     public function updateOrder(array $updateData): bool
     {
         $allowedFields = ['payment_status', 'shipping_status', 'delivery_method'];
-        
+
         $filteredData = array_intersect_key($updateData, array_flip($allowedFields));
-        
+
         if (empty($filteredData)) {
             throw new \InvalidArgumentException("No valid fields to update");
         }
@@ -280,8 +280,8 @@ class Order extends Model
      */
     public function canBeCancelled(): bool
     {
-        return in_array($this->payment_status, ['pending', 'failed']) && 
-               in_array($this->shipping_status, ['processing']);
+        return in_array($this->payment_status, ['pending', 'failed']) &&
+            in_array($this->shipping_status, ['processing']);
     }
 
     /**
@@ -289,8 +289,8 @@ class Order extends Model
      */
     public function canBeRefunded(): bool
     {
-        return $this->payment_status === 'paid' && 
-               in_array($this->shipping_status, ['processing', 'shipped']);
+        return $this->payment_status === 'paid' &&
+            in_array($this->shipping_status, ['processing', 'shipped']);
     }
 
     /**
@@ -301,16 +301,16 @@ class Order extends Model
         if ($this->payment_status === 'failed') {
             return 'Payment Failed';
         }
-        
+
         if ($this->shipping_status === 'cancelled') {
             return 'Cancelled';
         }
-        
+
         if ($this->payment_status === 'refunded') {
             return 'Refunded';
         }
-        
-        return match($this->shipping_status) {
+
+        return match ($this->shipping_status) {
             'processing' => 'Processing',
             'shipped' => 'Shipped',
             'delivered' => 'Delivered',
@@ -397,7 +397,7 @@ class Order extends Model
      */
     public function user()
     {
-        return $this->belongsTo(User::class, 'id', 'id');
+        return $this->belongsTo(User::class, 'user_id', 'id'); // ✅ Fixed
     }
 
     /**

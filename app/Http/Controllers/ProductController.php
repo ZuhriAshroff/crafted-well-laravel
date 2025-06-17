@@ -749,20 +749,31 @@ class ProductController extends Controller
             // Get all products (no pagination for admin table)
             $products = $query->get();
 
+            // Calculate stats for the dashboard cards
+            $averagePrice = Product::avg('standard_price') ?? 0;
+            $stats = [
+                'total' => Product::count(),
+                'active' => Product::where('is_active', true)->count(),
+                'bestsellers' => Product::where('is_bestseller', true)->count(),
+                'average_price' => round($averagePrice, 0), // Round to nearest whole number
+                'categories' => Product::distinct('base_category')->count(),
+                'inactive' => Product::where('is_active', false)->count(),
+            ];
+
             return response()->json([
-                'status' => 'success',
-                'data' => $products
+                'success' => true,
+                'products' => $products,
+                'stats' => $stats
             ]);
 
         } catch (\Exception $e) {
             \Log::error('Error fetching admin products: ' . $e->getMessage());
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Failed to fetch products'
             ], 500);
         }
     }
-
     /**
      * Get product options for admin forms
      */
@@ -772,58 +783,32 @@ class ProductController extends Controller
             $categories = Product::distinct()->pluck('base_category')->filter()->sort()->values();
             $types = Product::distinct()->pluck('product_type')->filter()->sort()->values();
 
-            // Get base formulations with explicit column selection to avoid duplicates
+            // Get base formulations with proper format for JavaScript
             $baseFormulations = DB::table('base_formulations')
-                ->select(
-                    DB::raw('base_formulation_id as id'), // Use alias to avoid duplicate issue
-                    'base_name',
-                    'description'
-                )
-                ->where('is_active', 1)
+                ->select('base_formulation_id', 'base_name', 'description')
                 ->orderBy('base_name')
                 ->get()
                 ->map(function ($formulation) {
                     return [
-                        'base_formulation_id' => $formulation->id,
-                        'base_name' => $formulation->base_name,
+                        'id' => $formulation->base_formulation_id,
+                        'name' => $formulation->base_name,
                         'description' => $formulation->description
                     ];
                 });
 
-            // If no active formulations found, try without the is_active filter
-            if ($baseFormulations->isEmpty()) {
-                $baseFormulations = DB::table('base_formulations')
-                    ->select(
-                        DB::raw('base_formulation_id as id'),
-                        'base_name',
-                        'description'
-                    )
-                    ->orderBy('base_name')
-                    ->get()
-                    ->map(function ($formulation) {
-                        return [
-                            'base_formulation_id' => $formulation->id,
-                            'base_name' => $formulation->base_name,
-                            'description' => $formulation->description
-                        ];
-                    });
-            }
-
             return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'categories' => $categories,
-                    'types' => $types,
-                    'base_formulations' => $baseFormulations
-                ]
+                'success' => true,
+                'categories' => $categories,
+                'types' => $types,
+                'formulations' => $baseFormulations
             ]);
 
         } catch (\Exception $e) {
             \Log::error('Error fetching product options: ' . $e->getMessage());
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Failed to fetch options',
-                'debug' => $e->getMessage()
+                'debug' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
