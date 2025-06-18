@@ -55,7 +55,7 @@ class CartController extends Controller
             ]);
 
             $product = Product::where('product_id', $request->product_id)
-                ->where('is_active', true)
+                ->where('is_active', 1)
                 ->firstOrFail();
 
             // Get current ready products cart from session
