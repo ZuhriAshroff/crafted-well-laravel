@@ -7,12 +7,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Laravel\Fortify\TwoFactorAuthenticatable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Carbon\Carbon;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     /**
      * The table associated with the model.
@@ -77,7 +78,7 @@ class User extends Authenticatable
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($user) {
             if (empty($user->registration_date)) {
                 $user->registration_date = now();
@@ -97,8 +98,8 @@ class User extends Authenticatable
     protected function password(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $this->password_hash,
-            set: fn ($value) => [
+            get: fn($value) => $this->password_hash,
+            set: fn($value) => [
                 'password_hash' => bcrypt($value),
                 'password' => bcrypt($value), // Set both fields
             ],
@@ -111,7 +112,7 @@ class User extends Authenticatable
     protected function name(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $this->first_name . ' ' . $this->last_name,
+            get: fn($value) => $this->first_name . ' ' . $this->last_name,
             set: function ($value) {
                 $nameParts = explode(' ', $value, 2);
                 return [
@@ -239,15 +240,15 @@ class User extends Authenticatable
     public static function getRecentUsers($limit = 5)
     {
         return static::select([
-                'id', // Changed from 'user_id'
-                'first_name', 
-                'last_name',
-                'email',
-                'registration_date',
-                'last_login',
-                'role',
-                'account_status'
-            ])
+            'id', // Changed from 'user_id'
+            'first_name',
+            'last_name',
+            'email',
+            'registration_date',
+            'last_login',
+            'role',
+            'account_status'
+        ])
             ->recent($limit)
             ->get();
     }
@@ -258,15 +259,15 @@ class User extends Authenticatable
     public static function findByEmail(string $email)
     {
         return static::select([
-                'id', // Changed from 'user_id'
-                'first_name',
-                'last_name', 
-                'email',
-                'phone_number',
-                'registration_date',
-                'last_login',
-                'account_status'
-            ])
+            'id', // Changed from 'user_id'
+            'first_name',
+            'last_name',
+            'email',
+            'phone_number',
+            'registration_date',
+            'last_login',
+            'account_status'
+        ])
             ->where('email', $email)
             ->active()
             ->first();
