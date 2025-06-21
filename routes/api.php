@@ -29,7 +29,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
 
     // Protected auth routes (require authentication)
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum'])->group(function () {
         // POST /api/auth/logout - Logout current session
         // Test: curl -X POST "https://crafted-well-laravel.up.railway.app/api/auth/logout" -H "Authorization: Bearer YOUR_TOKEN"
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -95,8 +95,7 @@ Route::prefix('products')->group(function () {
 // PROTECTED API ROUTES (Authentication Required)
 // ========================================
 
-Route::middleware(['auth:sanctum', 'active.user'])->group(function () {
-
+Route::middleware(['auth:sanctum'])->group(function () {
     // GET /api/user - Get current authenticated user (legacy endpoint)
     // Test: curl -X GET "https://crafted-well-laravel.up.railway.app/api/user" -H "Authorization: Bearer YOUR_TOKEN"
     Route::get('/user', function (Request $request) {
