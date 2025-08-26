@@ -108,7 +108,7 @@ Crafted Well is a revolutionary **personalized skincare platform** that creates 
 
 8. **Compile assets (in another terminal)**
    ```bash
-   npm run dev
+   composer run dev
    ```
 
 Visit `http://localhost:8000` to see your local application!
